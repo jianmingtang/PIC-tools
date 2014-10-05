@@ -37,7 +37,8 @@ class ParticleDistribution:
 	def __init__(self, fn, grid, nsp):
 		self.grid = grid
 		self.nsp = nsp
-		self.data = numpy.fromfile(fn, numpy.dtype( [('pad1','i4'),
+		datatype = numpy.dtype([
+			('pad1','i4'),
 			('axes','f4',(nsp,grid)),
 			('xlo','f4'), ('xhi','f4'), ('zlo','f4'),('zhi','f4'),
 			('ic','i4',(nsp,)),
@@ -48,27 +49,38 @@ class ParticleDistribution:
 			('vxa','f4',(nsp,)),
 			('vya','f4',(nsp,)),
 			('vza','f4',(nsp,)),
-			('pad2','i4')] ) ) [0]
+			('pad2','i4')
+			])
+		self.data = numpy.fromfile(fn, datatype)[0]
 
 	def cut(self, p):
+		p[1] = int(p[1])
+		p[2] = int(p[2])
+		A = self.data['fxyz']
 		if p[0] == 'x':
-			C = self.data['fxyz'][:,:,:,p[1]]
+			self.dataCUT = A[:,:,:,p[1]]
 			for i in range(p[1]+1,p[2]+1):
-				C += self.data['fxyz'][:,:,:,i]
-			return C
+				self.dataCUT += A[:,:,:,i]
 		elif p[0] == 'y':
-			C = self.data['fxyz'][:,:,p[1],:]
+			self.dataCUT = A[:,:,p[1],:]
 			for i in range(p[1]+1,p[2]+1):
-				C += self.data['fxyz'][:,:,i,:]
-			return C
+				self.dataCUT += A[:,:,i,:]
 		elif p[0] == 'z':
-			C = self.data['fxyz'][:,p[1],:,:]
+			self.dataCUT = A[:,p[1],:,:]
 			for i in range(p[1]+1,p[2]+1):
-				C += self.data['fxyz'][:,i,:,:]
-			return C
+				self.dataCUT += A[:,i,:,:]
 		else:
 			raise IndexError
 
+	def add2D(self,addset):
+		self.data2D = self.dataCUT[int(addset[0])]
+		for s in addset[1:]:
+			self.data2D += self.dataCUT[int(s)]
+
+	def add3D(self,addset):
+		self.data3D = self.data['fxyz'][int(addset[0])]
+		for s in addset[1:]:
+			self.data3D += self.data['fxyz'][int(s)]
 
 class Figure2D:
 	"""
@@ -77,8 +89,9 @@ class Figure2D:
 	"""
 	def __init__(self):
 		# self.fig stores a list of figure objects
-		self.fig = []
-	def add(self, name, F):
+		self.figs = []
+
+	def add_quad(self, name, F):
 # Does not work on chipolata: (older matplotlib?)
 #	i = 0
 #	fig, axs = pylab.subplots(2,2)
@@ -89,17 +102,30 @@ class Figure2D:
 #		ax.set_title(name+','+str(i))
 #		i += 1
 		title = name.replace(',','_')
-		self.fig.append(pylab.figure(title))
+		self.figs.append((title,pylab.figure(title)))
 		for i in range(4):
 			ax = pylab.subplot('22'+str(i+1))
 			pcm = ax.pcolormesh(F[i])
 			ax.axis('tight')
-			self.fig[-1].colorbar(pcm,shrink=0.9)
+			self.figs[-1][1].colorbar(pcm,shrink=0.9)
 			pylab.title(name+','+str(i))
-		if args.save_png:
-			pylab.savefig(title+'.png',bbox_inches='tight')
-			print 'image saved'
+#		if args.save_png:
+#			pylab.savefig(title+'.png',bbox_inches='tight')
+#			print 'image saved'
 
+	def add_one(self, name, F):
+		title = name.replace(',','_')
+		self.figs.append((title,pylab.figure(title)))
+		ax = pylab.subplot('111')
+		pcm = ax.pcolormesh(F)
+		ax.axis('tight')
+		self.figs[-1][1].colorbar(pcm,shrink=0.9)
+		pylab.title(name)
+
+	def savefig(self):
+		for fig in self.figs:
+			fig[1].savefig(fig[0]+'.png',bbox_inches='tight')
+			print fig[0] +' saved'
 
 class Figure3D:
 	"""
@@ -115,7 +141,7 @@ class Figure3D:
 		val.SetVoidArray(data, len(data), 1)
 		points = vtk.vtkPoints()
 	
-		Lx = numpy.arange(-1,1.01,0.02)
+		Lx = numpy.linspace(-1,1,101)
 		for x in Lx:
 			for y in Lx:
 				for z in Lx:
@@ -227,20 +253,26 @@ parser.add_argument('--d2', action='store_true',
 parser.add_argument('--d3', action='store_true',
 	help='make 3D plots')
 parser.add_argument('--grid', default=101,
-	help='number of grid points')
+	help='number of grid points (default = 101)')
 parser.add_argument('--nsp', default=4,
-	help='number of species')
+	help='number of species (default = 4)')
 parser.add_argument('--cut',
 	help='make a 2D cut [e.g. x,49,51]')
 parser.add_argument('--sp', default=0,
 	help='choose a species to plot for 3D')
 parser.add_argument('--iso',
-	help='Set the iso value (in ratio of fmax) for 3D')
+	help='Set the iso value (in ratio of fmax) for 3D (default = 0.2)')
+parser.add_argument('--add',
+	help='Combining species [e.g. 1,3]')
 parser.add_argument('--save-png', action='store_true',
 	help='save plots in png')
 #parser.add_argument('--save-pdf', action='store_true',
 #	help='save plots in pdf')
 args = parser.parse_args()
+
+# Check parameters range
+if int(args.nsp) < 0: raise ValueError
+if int(args.sp) < 0 or int(args.sp) >= int(args.nsp): raise ValueError
 
 
 # Load particle data with number of grid points and number of species
@@ -249,13 +281,17 @@ PD = ParticleDistribution(args.datafile,args.grid,args.nsp)
 if args.d2:
 	fig = Figure2D()
 	for s in ('fxy', 'fxz', 'fyz',):
-		fig.add(s, PD.data[s])
+		fig.add_quad(s, PD.data[s])
 	if args.cut:
-		p = args.cut.split(',')
-		p[1] = int(p[1])
-		p[2] = int(p[2])
-		fig.add('fxyz,'+args.cut, PD.cut(p))
+		PD.cut(args.cut.split(','))
+		fig.add_quad('fxyz,'+args.cut, PD.dataCUT)
+		if args.add:
+			PD.add2D(args.add.split(','))
+			fig.add_one('fxyz,cut('+args.cut+')add('+args.add+')',
+				PD.data2D)
 	pylab.show()
+	if args.save_png:
+		fig.savefig()
 
 #	One can save all images in one PDF file
 #	This backend is currently quite slow and the PDF file is huge
@@ -268,14 +304,18 @@ if args.d2:
 #		pp.close()
 
 if args.d3:
-	data3D = PD.data['fxyz'][int(args.sp)].ravel()
+	if args.add:
+		PD.add3D(args.add.split(','))
+		data3D = PD.data3D.ravel()
+	else:	
+		data3D = PD.data['fxyz'][int(args.sp)].ravel()
 	if args.iso:
 		isovalue = max(data3D) * float(args.iso)
 		print 'The iso value is set to ({0} of fmax) {1:6g}'.format(
 			args.iso,isovalue)
 	else:
 		isovalue = max(data3D) * 0.2
-		print 'The iso value is set to (20% of fmax)', isovalue
+		print 'The iso value is set to (0.2 of fmax) %6g' % isovalue
 	f3 = Figure3D(data3D)
 	f3.set_up_color()
 	f3.set_up_iso_surface(isovalue)
