@@ -222,10 +222,11 @@ class Figure3D:
 		cam.SetPosition(6, 3.5, 2.5)
 		cam.SetViewUp(0, 0, 1)
 
-	def show_on_screen(self):
+	def show_on_screen(self,title):
 		self.renWin = vtk.vtkRenderWindow()
 		self.renWin.AddRenderer(self.ren)
 		self.renWin.SetSize(500, 500)
+		self.renWin.SetWindowName(title)
 
 		iren = vtk.vtkRenderWindowInteractor()
 		iren.SetRenderWindow(self.renWin)
@@ -312,19 +313,21 @@ if args.d3:
 	else:
 		splist = (args.sp)
 		data3D = PD.data['fxyz'][int(args.sp)].ravel()
+	print 'The iso value is set to ',
 	if args.iso:
 		isovalue = max(data3D) * float(args.iso)
-		print 'The iso value is set to ({0} of fmax) {1:6g}'.format(
+		print '{1:6g} ({0} of fmax).'.format(
 			args.iso,isovalue)
 	else:
 		isovalue = max(data3D) * 0.2
-		print 'The iso value is set to (0.2 of fmax) %6g' % isovalue
+		print '%6g (0.2 of fmax).' % isovalue
 	f3 = Figure3D(data3D)
 	f3.set_up_color()
 	f3.set_up_iso_surface(isovalue)
 	f3.add_other_stuff()
 	f3.rendering()
-	f3.show_on_screen()
+	title = 'distf_sp({0})_iso{1:6g}'.format(splist,isovalue)
+	f3.show_on_screen(title)
 	if args.save_png:
-		fname = 'distf_sp({0})_iso{1:6g}_3D.png'.format(splist,isovalue)
+		fname = title+'_3D.png'
 		f3.save_png(fname)
