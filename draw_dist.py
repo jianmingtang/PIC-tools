@@ -305,9 +305,12 @@ if args.d2:
 
 if args.d3:
 	if args.add:
+		splist = args.add
+		splist = splist.replace(',','_')
 		PD.add3D(args.add.split(','))
 		data3D = PD.data3D.ravel()
-	else:	
+	else:
+		splist = (args.sp)
 		data3D = PD.data['fxyz'][int(args.sp)].ravel()
 	if args.iso:
 		isovalue = max(data3D) * float(args.iso)
@@ -323,5 +326,5 @@ if args.d3:
 	f3.rendering()
 	f3.show_on_screen()
 	if args.save_png:
-		fname = 'distf_sp{0}_iso{1:6g}_3D.png'.format(args.sp,isovalue)
+		fname = 'distf_sp({0})_iso{1:6g}_3D.png'.format(splist,isovalue)
 		f3.save_png(fname)
