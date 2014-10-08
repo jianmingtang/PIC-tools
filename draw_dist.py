@@ -32,7 +32,7 @@ import argparse
 class ParticleDistribution:
 	"""
 	This class is used to store data in ndarray from a NASA PIC data file.
-	Some methods for data slicing and summation are provided.
+	Methods for data slicing and summation are provided.
 	"""
 	def __init__(self, fn, grid, nsp):
 		self.grid = grid
@@ -52,7 +52,34 @@ class ParticleDistribution:
 			('pad2','i4')
 			])
 		self.data = numpy.fromfile(fn, datatype)[0]
+		print self.data['ic']
 
+	def __str__(self):
+		s = '\nBin location: '
+		s += 'x=(%4g,%4g), z=(%4g,%4g)\n\n' % (self.data['xlo'],
+			self.data['xhi'],self.data['zlo'],self.data['zhi'])
+		for i in range(self.nsp):
+			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
+				self.data['vxa'][i], self.data['vya'][i],
+				self.data['vza'][i] )
+		return s
+
+	def avg(self,s):
+		v = 0.
+		f = 0.
+		vx1 = 0.
+		vx2 = 0.
+		for i in range(self.grid):
+			for j in range(self.grid):
+				vx1 += self.data['fxy'][s,i,j] * self.data['axes'][s,j]
+				vx2 += self.data['fxz'][s,i,j] * self.data['axes'][s,i]
+				for k in range(self.grid):
+					f += self.data['fxyz'][s,i,j,k]
+					v += self.data['fxyz'][s,k,j,i] * self.data['axes'][s,i]
+
+		return v, f, v/f, vx1, vx2
+
+# Cut out a 2D slice from the 3D distribution
 	def cut(self, p):
 		p[1] = int(p[1])
 		p[2] = int(p[2])
@@ -72,14 +99,42 @@ class ParticleDistribution:
 		else:
 			raise IndexError
 
+# Combine species for a 2D slice
 	def add2D(self,addset):
+		allowed_error = [1.e-6] * self.grid 
+		self.axes = self.data['axes'][int(addset[0])]
 		self.data2D = self.dataCUT[int(addset[0])]
 		for s in addset[1:]:
+			diff = self.data['axes'][int(s)] - self.axes
+			if numpy.any(diff > allowed_error):
+				print addset, ' cannot be combined!!!'
+				raise IndexError
 			self.data2D += self.dataCUT[int(s)]
 
+# Combine species for reduced data sets
+	def add_reduced(self,addset):
+		self.dataR = {}
+		allowed_error = [1.e-6] * self.grid 
+		self.axes = self.data['axes'][int(addset[0])]
+		for f in ['fxy', 'fxz', 'fyz']:
+			self.dataR[f] = self.data[f][int(addset[0])]
+			for s in addset[1:]:
+				diff = self.data['axes'][int(s)] - self.axes
+				if numpy.any(diff > allowed_error):
+					print addset, ' cannot be combined!!!'
+					raise IndexError
+				self.dataR[f] += self.data[f][int(s)]
+
+# Combine species for 3D data
 	def add3D(self,addset):
+		allowed_error = [1.e-6] * self.grid 
+		self.axes = self.data['axes'][int(addset[0])]
 		self.data3D = self.data['fxyz'][int(addset[0])]
 		for s in addset[1:]:
+			diff = self.data['axes'][int(s)] - self.axes
+			if numpy.any(diff > allowed_error):
+				print addset, ' cannot be combined!!!'
+				raise IndexError
 			self.data3D += self.data['fxyz'][int(s)]
 
 class Figure2D:
@@ -91,7 +146,7 @@ class Figure2D:
 		# self.fig stores a list of figure objects
 		self.figs = []
 
-	def add_quad(self, name, F):
+	def add_quad(self, name, X, fZ):
 # Does not work on chipolata: (older matplotlib?)
 #	i = 0
 #	fig, axs = pylab.subplots(2,2)
@@ -101,23 +156,24 @@ class Figure2D:
 #		fig.colorbar(pcm,ax=ax,shrink=0.9)
 #		ax.set_title(name+','+str(i))
 #		i += 1
+
+# The default ordering for 2D meshgrid is Fortran style
 		title = name.replace(',','_')
 		self.figs.append((title,pylab.figure(title)))
 		for i in range(4):
+			fX,fY = numpy.meshgrid(X[i],X[i])
 			ax = pylab.subplot('22'+str(i+1))
-			pcm = ax.pcolormesh(F[i])
+			pcm = ax.pcolormesh(fX, fY, fZ[i])
 			ax.axis('tight')
 			self.figs[-1][1].colorbar(pcm,shrink=0.9)
 			pylab.title(name+','+str(i))
-#		if args.save_png:
-#			pylab.savefig(title+'.png',bbox_inches='tight')
-#			print 'image saved'
 
-	def add_one(self, name, F):
+	def add_one(self, name, X, fZ):
 		title = name.replace(',','_')
 		self.figs.append((title,pylab.figure(title)))
 		ax = pylab.subplot('111')
-		pcm = ax.pcolormesh(F)
+		fX,fY = numpy.meshgrid(X,X)
+		pcm = ax.pcolormesh(fX, fY, fZ)
 		ax.axis('tight')
 		self.figs[-1][1].colorbar(pcm,shrink=0.9)
 		pylab.title(name)
@@ -133,7 +189,7 @@ class Figure3D:
 	The class elements contain
 		vtkStructuredGrid, vtkActor, vtkRenderWindow
 	"""
-	def __init__(self, data):
+	def __init__(self, axes, data):
 		self.vmax = max(data)
 		self.sgrid = vtk.vtkStructuredGrid()
 
@@ -278,18 +334,28 @@ if int(args.sp) < 0 or int(args.sp) >= int(args.nsp): raise ValueError
 
 # Load particle data with number of grid points and number of species
 PD = ParticleDistribution(args.datafile,args.grid,args.nsp)
+print PD
+#print PD.avg(0)
+#print PD.avg(1)
+#print PD.avg(2)
+#print PD.avg(3)
 
 if args.d2:
 	fig = Figure2D()
-	for s in ('fxy', 'fxz', 'fyz',):
-		fig.add_quad(s, PD.data[s])
+	for f in ('fxy', 'fxz', 'fyz',):
+		fig.add_quad(f, PD.data['axes'], PD.data[f])
 	if args.cut:
 		PD.cut(args.cut.split(','))
-		fig.add_quad('fxyz,'+args.cut, PD.dataCUT)
+		fig.add_quad('fxyz,'+args.cut, PD.data['axes'], PD.dataCUT)
 		if args.add:
 			PD.add2D(args.add.split(','))
 			fig.add_one('fxyz,cut('+args.cut+')add('+args.add+')',
-				PD.data2D)
+				PD.axes, PD.data2D)
+	elif args.add:
+		PD.add_reduced(args.add.split(','))
+		for f in ('fxy', 'fxz', 'fyz',):
+			fig.add_one(f+',add('+args.add+')', PD.axes,
+				PD.dataR[f])
 	pylab.show()
 	if args.save_png:
 		fig.savefig()
@@ -305,6 +371,7 @@ if args.d2:
 #		pp.close()
 
 if args.d3:
+	axes = PD.data['axes'][int(args.sp)]
 	if args.add:
 		splist = args.add
 		splist = splist.replace(',','_')
@@ -321,7 +388,7 @@ if args.d3:
 	else:
 		isovalue = max(data3D) * 0.2
 		print '%6g (0.2 of fmax).' % isovalue
-	f3 = Figure3D(data3D)
+	f3 = Figure3D(axes, data3D)
 	f3.set_up_color()
 	f3.set_up_iso_surface(isovalue)
 	f3.add_other_stuff()
