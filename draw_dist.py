@@ -23,18 +23,24 @@
 
 
 import math
-import vtk
+from vtk import *
 import numpy
 import pylab
 #from matplotlib.backends.backend_pdf import PdfPages
 import argparse
+
 
 class ParticleDistribution:
 	"""
 	This class is used to store data in ndarray from a NASA PIC data file.
 	Methods for data slicing and summation are provided.
 	"""
-	def __init__(self, fn, grid, nsp):
+	def __init__(self, fname, grid, nsp):
+		"""
+		fname: data filename
+		grid: number of grid points
+		nsp: number of species
+		"""
 		self.grid = grid
 		self.nsp = nsp
 		datatype = numpy.dtype([
@@ -51,7 +57,7 @@ class ParticleDistribution:
 			('vza','f4',(nsp,)),
 			('pad2','i4')
 			])
-		self.data = numpy.fromfile(fn, datatype)[0]
+		self.data = numpy.fromfile(fname, datatype)[0]
 		print self.data['ic']
 
 	def __str__(self):
@@ -69,91 +75,107 @@ class ParticleDistribution:
 		f = 0.
 		vx1 = 0.
 		vx2 = 0.
-		for i in range(self.grid):
-			for j in range(self.grid):
-				vx1 += self.data['fxy'][s,i,j] * self.data['axes'][s,j]
-				vx2 += self.data['fxz'][s,i,j] * self.data['axes'][s,i]
-				for k in range(self.grid):
+		for i in xrange(self.grid):
+			for j in xrange(self.grid):
+				vx1 += self.data['fxy'][s,j,i] * self.data['axes'][s,i]
+				vx2 += self.data['fxz'][s,j,i] * self.data['axes'][s,i]
+				for k in xrange(self.grid):
 					f += self.data['fxyz'][s,i,j,k]
 					v += self.data['fxyz'][s,k,j,i] * self.data['axes'][s,i]
 
 		return v, f, v/f, vx1, vx2
 
-# Cut out a 2D slice from the 3D distribution
 	def cut(self, p):
-		p[1] = int(p[1])
-		p[2] = int(p[2])
+		"""
+		Cut out a 2D slice from the 3D data
+		p = [dir,rmin,rmax]
+		"""
+		rmin = int(p[1])
+		rmax = int(p[2])
 		A = self.data['fxyz']
 		if p[0] == 'x':
-			self.dataCUT = A[:,:,:,p[1]]
-			for i in range(p[1]+1,p[2]+1):
+			self.dataCUT = A[:,:,:,rmin]
+			for i in range(rmin+1,rmax+1):
 				self.dataCUT += A[:,:,:,i]
 		elif p[0] == 'y':
-			self.dataCUT = A[:,:,p[1],:]
-			for i in range(p[1]+1,p[2]+1):
+			self.dataCUT = A[:,:,rmin,:]
+			for i in range(rmin+1,rmax+1):
 				self.dataCUT += A[:,:,i,:]
 		elif p[0] == 'z':
-			self.dataCUT = A[:,p[1],:,:]
-			for i in range(p[1]+1,p[2]+1):
+			self.dataCUT = A[:,rmin,:,:]
+			for i in range(rmin+1,rmax+1):
 				self.dataCUT += A[:,i,:,:]
 		else:
 			raise IndexError
 
-# Combine species for a 2D slice
-	def add2D(self,addset):
+	def _check_add(self, sps):
+		# Check the ranges of velocities are consistent.
 		allowed_error = [1.e-6] * self.grid 
-		self.axes = self.data['axes'][int(addset[0])]
-		self.data2D = self.dataCUT[int(addset[0])]
-		for s in addset[1:]:
+		self.axes = self.data['axes'][int(sps[0])]
+		for s in sps[1:]:
 			diff = self.data['axes'][int(s)] - self.axes
 			if numpy.any(diff > allowed_error):
 				print addset, ' cannot be combined!!!'
 				raise IndexError
+
+	def add2D(self, sps):
+		"""
+		Combine species for a 2D slice
+		sps = [s1,s2,...]
+		"""
+		self._check_add(sps)
+		self.data2D = self.dataCUT[int(sps[0])]
+		for s in sps[1:]:
 			self.data2D += self.dataCUT[int(s)]
 
-# Combine species for reduced data sets
-	def add_reduced(self,addset):
+	def add_reduced(self, sps):
+		"""
+		Combine species for reduced data sets
+		sps = [s1,s2,...]
+		"""
+		self._check_add(sps)
 		self.dataR = {}
-		allowed_error = [1.e-6] * self.grid 
-		self.axes = self.data['axes'][int(addset[0])]
 		for f in ['fxy', 'fxz', 'fyz']:
-			self.dataR[f] = self.data[f][int(addset[0])]
-			for s in addset[1:]:
-				diff = self.data['axes'][int(s)] - self.axes
-				if numpy.any(diff > allowed_error):
-					print addset, ' cannot be combined!!!'
-					raise IndexError
+			self.dataR[f] = self.data[f][int(sps[0])]
+			for s in sps[1:]:
 				self.dataR[f] += self.data[f][int(s)]
 
-# Combine species for 3D data
-	def add3D(self,addset):
-		allowed_error = [1.e-6] * self.grid 
-		self.axes = self.data['axes'][int(addset[0])]
-		self.data3D = self.data['fxyz'][int(addset[0])]
-		for s in addset[1:]:
-			diff = self.data['axes'][int(s)] - self.axes
-			if numpy.any(diff > allowed_error):
-				print addset, ' cannot be combined!!!'
-				raise IndexError
+	def add3D(self, sps):
+		"""
+		Combine species for 3D data
+		sps = [s1,s2,...]
+		"""
+		self._check_add(sps)
+		self.data3D = self.data['fxyz'][int(sps[0])]
+		for s in sps[1:]:
 			self.data3D += self.data['fxyz'][int(s)]
+
 
 class Figure2D:
 	"""
 	This class creates and stores 2D plots using Matplotlib.
-	Each figure shows 4 panels of data. 
+	There are two types of figures:
+		1. 4 panels with individual species
+		2. 1 panel of combined species
 	"""
 	def __init__(self):
 		# self.fig stores a list of figure objects
 		self.figs = []
 
 	def add_quad(self, name, X, fZ):
+		"""
+		Create a 4-panel figure
+		name: title of the figure
+		X: 1D axes data
+		fZ: 2D data set (Fortran indexing)
+		"""
 # Does not work on chipolata: (older matplotlib?)
 #	i = 0
 #	fig, axs = pylab.subplots(2,2)
 #	for ax in axs.ravel():
 #		pcm = ax.pcolormesh(F[i])
 #		ax.axis('tight')
-#		fig.colorbar(pcm,ax=ax,shrink=0.9)
+#		fig.colorbar(pcm,ax=ax)
 #		ax.set_title(name+','+str(i))
 #		i += 1
 
@@ -165,53 +187,64 @@ class Figure2D:
 			ax = pylab.subplot('22'+str(i+1))
 			pcm = ax.pcolormesh(fX, fY, fZ[i])
 			ax.axis('tight')
-			self.figs[-1][1].colorbar(pcm,shrink=0.9)
+			self.figs[-1][1].colorbar(pcm)
 			pylab.title(name+','+str(i))
 
 	def add_one(self, name, X, fZ):
+		"""
+		Create a 1-panel figure
+		name: title of the figure
+		X: 1D axes data
+		fZ: 2D data set (Fortran indexing)
+		"""
 		title = name.replace(',','_')
 		self.figs.append((title,pylab.figure(title)))
 		ax = pylab.subplot('111')
 		fX,fY = numpy.meshgrid(X,X)
 		pcm = ax.pcolormesh(fX, fY, fZ)
 		ax.axis('tight')
-		self.figs[-1][1].colorbar(pcm,shrink=0.9)
+		self.figs[-1][1].colorbar(pcm)
 		pylab.title(name)
 
 	def savefig(self):
+		"""
+		Save all figures in PNG format
+		"""
 		for fig in self.figs:
 			fig[1].savefig(fig[0]+'.png',bbox_inches='tight')
 			print fig[0] +' saved'
+
 
 class Figure3D:
 	"""
 	This class creates vtk objects for 3D viewing.
 	The class elements contain
-		vtkStructuredGrid, vtkActor, vtkRenderWindow
+		vtkStructuredGrid, vtkActor, vtkRenderer, vtkRenderWindow
 	"""
 	def __init__(self, axes, data):
 		self.vmax = max(data)
-		self.sgrid = vtk.vtkStructuredGrid()
+		self.box = axes[-1]
 
-		val = vtk.vtkFloatArray()
+		val = vtkFloatArray()
 		val.SetVoidArray(data, len(data), 1)
-		points = vtk.vtkPoints()
-	
-		Lx = numpy.linspace(-1,1,101)
-		for x in Lx:
-			for y in Lx:
-				for z in Lx:
-					points.InsertNextPoint(x, y, z)
 
-		self.sgrid.SetDimensions(101,101,101)
+		points = vtkPoints()
+		for x in axes:
+			for y in axes:
+				for z in axes:
+					points.InsertNextPoint(z, y, x)
+
+		ng = len(axes)
+		self.sgrid = vtkStructuredGrid()
+		self.sgrid.SetDimensions(ng,ng,ng)
 		self.sgrid.SetPoints(points)
 		self.sgrid.GetPointData().SetScalars(val)
 
 	def set_up_color(self):
-		color = vtk.vtkDoubleArray()
+		color = vtkDoubleArray()
 		color.SetName("Color")
 		color.SetNumberOfComponents(3)
-		Lx = numpy.arange(-1,1.01,0.02)
+		Lx = numpy.linspace(-1,1,101)
 		for x in Lx:
 			for y in Lx:
 				for z in Lx:
@@ -220,80 +253,101 @@ class Figure3D:
 		self.sgrid.GetPointData().SetVectors(color)
 
 	def set_up_iso_surface(self, isovalue):
-		iso = vtk.vtkContourFilter()
+		iso = vtkContourFilter()
 		iso.SetInput(self.sgrid)
 		iso.SetValue(0, isovalue)
 
-		normals = vtk.vtkPolyDataNormals();
+		normals = vtkPolyDataNormals();
 		normals.SetInput(iso.GetOutput());
 #		normals.SetFeatureAngle(30);
 
-		isoMapper = vtk.vtkPolyDataMapper();
+		isoMapper = vtkPolyDataMapper();
 		isoMapper.SetInput(normals.GetOutput());
 		isoMapper.SetScalarRange(0, self.vmax);
 		isoMapper.SetScalarModeToUsePointFieldData()
 		isoMapper.SetColorModeToMapScalars()
 		isoMapper.SelectColorArray("Color")
 
-		self.Actor_iso = vtk.vtkActor();
+		self.Actor_iso = vtkActor();
 		self.Actor_iso.SetMapper(isoMapper);
 
 	def add_other_stuff(self):
+		r = self.box
+		# add Y axis
+		self.Actor_axis = vtkAxisActor()
+		self.Actor_axis.SetPoint1(-r,-r,-r)
+		self.Actor_axis.SetPoint2(-r,r,-r)
+		self.Actor_axis.SetAxisTypeToY()
+		self.Actor_axis.SetMajorStart(-(r//5)*5)
+		self.Actor_axis.SetMinorStart(-math.floor(r))
+		self.Actor_axis.SetDeltaMajor(5)
+		self.Actor_axis.SetDeltaMinor(1)
+		self.Actor_axis.GetProperty().SetColor(0,0,0)
+		self.Actor_axis.GetProperty().SetLineWidth(2)
+		# add axes
+		self.Actor_axes = vtkAxesActor()
+		tf = vtk.vtkTransform()
+		Ll = r * 0.5
+		lr = r * 0.003
+		tf.Translate(-r,-r,-r)
+		self.Actor_axes.SetUserTransform(tf)
+		self.Actor_axes.SetShaftTypeToCylinder()
+		self.Actor_axes.SetTotalLength(Ll,Ll,Ll)
+		self.Actor_axes.SetCylinderRadius(lr)
+		self.Actor_axes.SetConeRadius(lr*10)
+
+		xca = self.Actor_axes.GetXAxisCaptionActor2D()
+		self.Actor_axes.SetXAxisLabelText('x')
+		self.Actor_axes.SetYAxisLabelText('y')
+		self.Actor_axes.SetZAxisLabelText('z')
+		self.Actor_axes.SetNormalizedLabelPosition(1.2,1,1.2)
+		tp = vtkTextProperty()
+		tp.SetColor(0,0,0)
+		self.Actor_axes.GetXAxisCaptionActor2D().SetCaptionTextProperty(tp)
+		self.Actor_axes.GetYAxisCaptionActor2D().SetCaptionTextProperty(tp)
+		self.Actor_axes.GetZAxisCaptionActor2D().SetCaptionTextProperty(tp)
 		# add a bounding box
-		box = vtk.vtkStructuredGridOutlineFilter()
+		box = vtkStructuredGridOutlineFilter()
 		box.SetInput(self.sgrid)
-
-		Mapper_box = vtk.vtkPolyDataMapper()
+		Mapper_box = vtkPolyDataMapper()
 		Mapper_box.SetInput(box.GetOutput())
-
-		self.Actor_box = vtk.vtkActor()
+		self.Actor_box = vtkActor()
 		self.Actor_box.SetMapper(Mapper_box)
 		self.Actor_box.GetProperty().SetColor(0, 0, 0)
-		self.Actor_box.GetProperty().SetLineWidth(2)
-
-		# add a line of text
-		text = vtk.vtkVectorText()
-		text.SetText("fxyz")
-
-		Mapper_text = vtk.vtkPolyDataMapper()
-		Mapper_text.SetInput(text.GetOutput())
-
-		self.Actor_text = vtk.vtkActor()
-		self.Actor_text.SetMapper(Mapper_text)
-		self.Actor_text.GetProperty().SetColor(0, 0, 0)
-		self.Actor_text.SetScale(0.3125,0.3125,0.3125)
-		self.Actor_text.SetPosition(1.1,-0.625,-1.25)
-		self.Actor_text.RotateZ(90)
+		self.Actor_box.GetProperty().SetLineWidth(1)
 
 	def rendering(self):
-		self.ren = vtk.vtkRenderer()
+		self.ren = vtkRenderer()
 		self.ren.AddActor(self.Actor_iso)
+		self.ren.AddActor(self.Actor_axes)
+		self.ren.AddActor(self.Actor_axis)
 		self.ren.AddActor(self.Actor_box)
-		self.ren.AddActor(self.Actor_text)
 		self.ren.SetBackground(1, 1, 1)
-		self.ren.ResetCameraClippingRange(-2,2,-2,2,-2,2)
+		r = self.box
+		self.ren.ResetCameraClippingRange(-r,r,-r,r,-r,r)
 
 		cam = self.ren.GetActiveCamera()
 		cam.SetFocalPoint(0, 0, 0)
-		cam.SetPosition(6, 3.5, 2.5)
+		cam.SetPosition(r*6, r*2, r*0.5)
 		cam.SetViewUp(0, 0, 1)
 
 	def show_on_screen(self,title):
-		self.renWin = vtk.vtkRenderWindow()
+		self.renWin = vtkRenderWindow()
 		self.renWin.AddRenderer(self.ren)
 		self.renWin.SetSize(500, 500)
 		self.renWin.SetWindowName(title)
 
-		iren = vtk.vtkRenderWindowInteractor()
+		iren = vtkRenderWindowInteractor()
 		iren.SetRenderWindow(self.renWin)
 		iren.Initialize()
 		self.renWin.Render()
 		iren.Start()
+
 	def save_png(self,fname):
-		renderLarge = vtk.vtkRenderLargeImage()
+		renderLarge = vtkRenderLargeImage()
 		renderLarge.SetInput(self.ren)
 		renderLarge.SetMagnification(1)
-		writer = vtk.vtkPNGWriter()
+		writer = vtkPNGWriter()
 		writer.SetInput(renderLarge.GetOutput())
 		writer.SetFileName(fname)
 		writer.Write()
@@ -301,64 +355,62 @@ class Figure3D:
 
 
 ### main program ###
+if __name__ == "__main__": 
 
-parser = argparse.ArgumentParser(description=
-        'Draw distribution function at a given (r,t)')
-parser.add_argument('datafile', help='the input data file')
-parser.add_argument('--d2', action='store_true',
-	help='make 2D plots')
-parser.add_argument('--d3', action='store_true',
-	help='make 3D plots')
-parser.add_argument('--grid', default=101,
-	help='number of grid points (default = 101)')
-parser.add_argument('--nsp', default=4,
-	help='number of species (default = 4)')
-parser.add_argument('--cut',
-	help='make a 2D cut [e.g. x,49,51]')
-parser.add_argument('--sp', default=0,
-	help='choose a species to plot for 3D')
-parser.add_argument('--iso',
-	help='Set the iso value (in ratio of fmax) for 3D (default = 0.2)')
-parser.add_argument('--add',
-	help='Combining species [e.g. 1,3]')
-parser.add_argument('--save-png', action='store_true',
-	help='save plots in png')
+	parser = argparse.ArgumentParser(description=
+        	'Draw distribution function at a given (r,t)')
+	parser.add_argument('datafile', help='the input data file')
+	parser.add_argument('--d2', action='store_true',
+		help='make 2D plots')
+	parser.add_argument('--d3', action='store_true',
+		help='make 3D plots')
+	parser.add_argument('--grid', default=101,
+		help='number of grid points (default = 101)')
+	parser.add_argument('--nsp', default=4,
+		help='number of species (default = 4)')
+	parser.add_argument('--cut',
+		help='make a 2D cut [e.g. x,49,51]')
+	parser.add_argument('--sp', default=0,
+		help='choose a species to plot for 3D')
+	parser.add_argument('--iso',
+		help='Set the iso value (in ratio of fmax) for 3D' \
+			+ '(default = 0.2)')
+	parser.add_argument('--add',
+		help='Combining species [e.g. 1,3]')
+	parser.add_argument('--save-png', action='store_true',
+		help='save plots in png')
 #parser.add_argument('--save-pdf', action='store_true',
 #	help='save plots in pdf')
-args = parser.parse_args()
+	args = parser.parse_args()
 
 # Check parameters range
-if int(args.nsp) < 0: raise ValueError
-if int(args.sp) < 0 or int(args.sp) >= int(args.nsp): raise ValueError
+	if int(args.nsp) < 0: raise ValueError
+	if int(args.sp) < 0 or int(args.sp) >= int(args.nsp): raise ValueError
 
 
 # Load particle data with number of grid points and number of species
-PD = ParticleDistribution(args.datafile,args.grid,args.nsp)
-print PD
-#print PD.avg(0)
-#print PD.avg(1)
-#print PD.avg(2)
-#print PD.avg(3)
+	PD = ParticleDistribution(args.datafile,args.grid,args.nsp)
+#	print PD
 
-if args.d2:
-	fig = Figure2D()
-	for f in ('fxy', 'fxz', 'fyz',):
-		fig.add_quad(f, PD.data['axes'], PD.data[f])
-	if args.cut:
-		PD.cut(args.cut.split(','))
-		fig.add_quad('fxyz,'+args.cut, PD.data['axes'], PD.dataCUT)
-		if args.add:
-			PD.add2D(args.add.split(','))
-			fig.add_one('fxyz,cut('+args.cut+')add('+args.add+')',
-				PD.axes, PD.data2D)
-	elif args.add:
-		PD.add_reduced(args.add.split(','))
+	if args.d2:
+		fig = Figure2D()
 		for f in ('fxy', 'fxz', 'fyz',):
-			fig.add_one(f+',add('+args.add+')', PD.axes,
-				PD.dataR[f])
-	pylab.show()
-	if args.save_png:
-		fig.savefig()
+			fig.add_quad(f, PD.data['axes'], PD.data[f])
+		if args.cut:
+			PD.cut(args.cut.split(','))
+			fig.add_quad('fxyz,cut('+args.cut+')', PD.data['axes'],
+				PD.dataCUT)
+			if args.add:
+				PD.add2D(args.add.split(','))
+				fig.add_one('fxyz,cut('+args.cut+')add(' \
+					+args.add+')', PD.axes, PD.data2D)
+		elif args.add:
+			PD.add_reduced(args.add.split(','))
+			for f in ('fxy', 'fxz', 'fyz',):
+				fig.add_one(f+',add('+args.add+')', PD.axes,
+					PD.dataR[f])
+		pylab.show()
+		if args.save_png: fig.savefig()
 
 #	One can save all images in one PDF file
 #	This backend is currently quite slow and the PDF file is huge
@@ -370,31 +422,32 @@ if args.d2:
 #			pp.savefig(f, box_inches='tight')
 #		pp.close()
 
-if args.d3:
-	axes = PD.data['axes'][int(args.sp)]
-	if args.add:
-		splist = args.add
-		splist = splist.replace(',','_')
-		PD.add3D(args.add.split(','))
-		data3D = PD.data3D.ravel()
-	else:
-		splist = (args.sp)
-		data3D = PD.data['fxyz'][int(args.sp)].ravel()
-	print 'The iso value is set to ',
-	if args.iso:
-		isovalue = max(data3D) * float(args.iso)
-		print '{1:6g} ({0} of fmax).'.format(
-			args.iso,isovalue)
-	else:
-		isovalue = max(data3D) * 0.2
-		print '%6g (0.2 of fmax).' % isovalue
-	f3 = Figure3D(axes, data3D)
-	f3.set_up_color()
-	f3.set_up_iso_surface(isovalue)
-	f3.add_other_stuff()
-	f3.rendering()
-	title = 'distf_sp({0})_iso{1:6g}'.format(splist,isovalue)
-	f3.show_on_screen(title)
-	if args.save_png:
-		fname = title+'_3D.png'
-		f3.save_png(fname)
+	if args.d3:
+		axes = PD.data['axes'][int(args.sp)]
+		if args.add:
+			splist = args.add
+			splist = splist.replace(',','_')
+			PD.add3D(args.add.split(','))
+			data3D = PD.data3D.ravel()
+		else:
+			splist = (args.sp)
+			data3D = PD.data['fxyz'][int(args.sp)].ravel()
+		print 'The iso value is set to ',
+		if args.iso:
+			isovalue = max(data3D) * float(args.iso)
+			print '{1:6g} ({0} of fmax).'.format(
+				args.iso,isovalue)
+		else:
+			isovalue = max(data3D) * 0.2
+			print '%6g (0.2 of fmax).' % isovalue
+		f3 = Figure3D(axes, data3D)
+		f3.set_up_color()
+		f3.set_up_iso_surface(isovalue)
+		f3.add_other_stuff()
+		f3.rendering()
+		title = 'fxyz_sp({0})_iso{1:6g}'.format(splist,isovalue)
+		print 'Plotting ' + title
+		f3.show_on_screen(title)
+		if args.save_png:
+			fname = title+'_3D.png'
+			f3.save_png(fname)
