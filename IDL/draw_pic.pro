@@ -100,7 +100,7 @@ end
 pro draw_3D, fxyz, iso
 	fmax = max(fxyz)
 	isosurface, fxyz, fmax*iso, verts, conns
-	L = size(fxyz)[1] - 1
+	L = (size(fxyz))[1] - 1
 	c = L / 2
 	shade=bytscl(sqrt((verts[0,*]-c)^2+(verts[1,*]-c)^2+(verts[2,*]-c)^2))
 	Ll = L * .2
@@ -111,13 +111,17 @@ pro draw_3D, fxyz, iso
 	dev = !d.name
 	for i = 0, nframes do begin
 		set_plot, 'z'
-		device, set_resolution=[640,480], set_font="Times*48"
-		surface, dist(2), /nodata, ax=40, az=360.*i/nframes+5, /save, $
-			xrange=[Ll,Lr], yrange=[Ll,Lr], zrange=[Ll,Lr]
+		device, decompose=0, set_resolution=[640,480]
+		surface, dist(2), /nodata, ax=40, az=360.*i/nframes+5, $
+			xrange=[Ll,Lr], yrange=[Ll,Lr], zrange=[Ll,Lr], $
+			/save, charsize=2
 		image = polyshade(verts,conns,/t3d,shade=shade)
 		snapshot = tvrd()
 		set_plot, dev
 		tv, snapshot
+		index = strtrim(string(i),2)
+		if i lt 10 then index = '0' + index
+;		write_png, 'pic' + index + '.png', tvrd(/true)
 		wait, 1
 	endfor
 end
