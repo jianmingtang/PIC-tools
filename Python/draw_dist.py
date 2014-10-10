@@ -390,7 +390,7 @@ if __name__ == "__main__":
 
 # Load particle data with number of grid points and number of species
 	PD = ParticleDistribution(args.datafile,args.grid,args.nsp)
-#	print PD
+	print PD
 
 	if args.d2:
 		fig = Figure2D()
