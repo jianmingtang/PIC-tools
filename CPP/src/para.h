@@ -9,7 +9,7 @@ namespace bpo = boost::program_options;
 
 class ParaPIC {
 public:
-	unsigned int time_slice;
+	unsigned int time;
 	std::string Bx, By, Bz, Ex, Ey, Ez;
 	double Lx, Ly, Lz;
 	unsigned int nx, ny, nz;
@@ -24,7 +24,7 @@ public:
 
 class Parameter: public ParaPT, public ParaPIC {
 public:
-	std::string origin;
+	std::string source;
 	unsigned int rsize;
 	std::string field_path, pdist_path;
 

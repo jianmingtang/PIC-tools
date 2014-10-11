@@ -36,9 +36,11 @@ class FieldLANL:
 		datafiles: dict of full filenames
 		grid: numbers of grid points
 		"""
+		nx = grid[0]
+		nz = grid[2]
 		self.data = {}
-		skip = (grid[0]*grid[2]+2)*4*(time-1)
-		datatype = numpy.dtype( [('field','f4',(grid[2],grid[0]))] )
+		skip = (nx * nz + 2) * 4 * (time - 1)
+		datatype = numpy.dtype( [('field','f4',(nz,nx))] )
 		for k in datafiles:
 			print 'Reading ' + datafiles[k] + ' ...'
 			f = open(datafiles[k])
@@ -51,11 +53,13 @@ class FieldNASA:
 	"""
 	This class is used to store data in ndarray from NASA PIC data files.
 	"""
-	def __init__(self, fname, nx, nz, nss=4):
+	def __init__(self, fname, grid, nss=4):
 		"""
 		fname: data filename
 		grid: number of grid points
 		"""
+		nx = grid[0]
+		nz = grid[2]
 		self.data = {}
 		datatype = numpy.dtype([
 			('pad1','i4'),
@@ -89,9 +93,7 @@ class FieldNASA:
 			('pad2','i4')
 			])
 		self.data = numpy.fromfile(fname, datatype)[0]
-#		fcomp = ('Bx','By','Bz','Ex','Ey','Ez',)
-#		for k in fcomp:
-#			self.data[k]
+
 
 class Figure2D:
 	"""
@@ -111,8 +113,8 @@ class Figure2D:
 		title = name.replace(' ','_')
 		self.figs.append((title,pylab.figure(title)))
 		ax = pylab.subplot('111')
-		X = numpy.linspace(0,L[0],grid[0])
-		Y = numpy.linspace(0,L[2],grid[2])
+		X = numpy.linspace(-L[0]/2,L[0]/2,grid[0])
+		Y = numpy.linspace(-L[2]/2,L[2]/2,grid[2])
 		fX,fY = numpy.meshgrid(X,Y)
 		pcm = ax.pcolormesh(fX, fY, fZ)
 		ax.axis('tight')
@@ -158,10 +160,10 @@ if __name__ == "__main__":
 		help='plot B field')
 	parser.add_argument('--plot-E', action='store_true',
 		help='plot E field')
-	parser.add_argument('-t', dest='time', default=1, type=int,
-		help='make 2D plots')
+	parser.add_argument('-t', dest='time',
+		help='choose a time slice')
 	parser.add_argument('--grid',
-		help='number of grid points')
+		help='number of grid points, e.g. nx,ny,nz')
 	parser.add_argument('--save-png', action='store_true',
 		help='save plots in png')
 	args = parser.parse_args()
@@ -173,25 +175,29 @@ if __name__ == "__main__":
 		if args.plot_E:
 			datafiles={'Ex':'Ex.gda','Ey':'Ey.gda','Ez':'Ez.gda'}
 		for k in datafiles:
-			datafiles[k] = args.datapath + datafiles[k]
+			datafiles[k] = args.datapath + '/' + datafiles[k]
 		if args.grid:
-			grid = args.grid.strsplit(',')
+			grid = map(int, args.grid.strsplit(','))
 		else:
-			info_file = args.datapath + 'info'
+			info_file = args.datapath + '/info'
 			grid, L = read_from_info(info_file)
 
-		emf = FieldLANL(datafiles, grid, args.time)
-		time = str(args.time)
+		emf = FieldLANL(datafiles, grid, int(args.time))
 
-	if args.source == 'NASA':
-		fname = args.datapath + 'fields-'
-		nx = 1000
-		nz = 800
-		time = '{0:05d}'.format(args.time)
-		fname = fname + time + '.dat'
-		grid = [nx, 1, nz]
-		L = [320., 0, 64.]
-		emf = FieldNASA(fname,nx,nz)
+	elif args.source == 'NASA':
+		fname = args.datapath + '/fields-'
+#		time = '{0:05d}'.format(args.time)
+		fname = fname + args.time.zfill(5) + '.dat'
+		if args.grid:
+			grid = map(int, args.grid.strsplit(','))
+		else:
+			grid = [1000, 1, 800]
+		L = [320., 0, 128.]
+		emf = FieldNASA(fname, grid)
+
+	else:
+		print 'No source selected'
+		exit(1)
 
 	fig = Figure2D()
 	if args.plot_B:
@@ -199,7 +205,8 @@ if __name__ == "__main__":
 	if args.plot_E:
 		fcomp = ['Ex','Ey','Ez']
 	for f in fcomp:
-		fig.add_one(args.source+' '+f+' '+time, emf.data[f], L, grid)
+		fig.add_one(args.source + ' ' + f + ' ' + args.time,
+			emf.data[f], L, grid)
 
 	pylab.show()
 	if args.save_png: fig.savefig()

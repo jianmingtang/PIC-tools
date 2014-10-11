@@ -6,6 +6,10 @@
 #define DATA_SIZE 4
 #define N_OF_FIELDS 6
 
+
+/**
+ *   This class stores the EM field data
+ */
 class EMField {
 public:
 	EMField(const Parameter &);
@@ -15,23 +19,27 @@ public:
 //	double get_E(const double[]);
 
 // get fields at the sites
-	double get_Bx(unsigned int);
-	double get_By(unsigned int);
-	double get_Bz(unsigned int);
-	double get_B(unsigned int) const;
-	double get_Ex(unsigned int);
-	double get_Ey(unsigned int);
-	double get_Ez(unsigned int);
-	double get_E(unsigned int) const;
+	double Get_Bx(unsigned int) const;
+	double Get_By(unsigned int) const;
+	double Get_Bz(unsigned int) const;
+	double Get_B(unsigned int) const;
+	double Get_Ex(unsigned int) const;
+	double Get_Ey(unsigned int) const;
+	double Get_Ez(unsigned int) const;
+	double Get_E(unsigned int) const;
+
+	double (EMField::*Get_F)(unsigned int) const;
+        double Get_FF(unsigned int i) const {
+		return (this->*Get_F)(i);
+	}
 
 private:
-	unsigned long int rsize, skip;
+	unsigned int rsize, skip;
 	float *_F[N_OF_FIELDS];
-//	float *Bx, *By, *Bz;
 
 	void Read_From_File(std::string, unsigned int);
 
-friend void pyplot (const EMField &, int, int, int);
+//friend void pyplot (const EMField &, int, int, int);
 };
 
 

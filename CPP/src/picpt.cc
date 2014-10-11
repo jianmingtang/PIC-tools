@@ -58,13 +58,13 @@ int main(int argc, char *argv[]) {
 	("plot-Ez", "plot the z component of the electric field")
 	;
 	fOpt.add_options()
-	("origin", bpo::value<std::string>(&para.origin),
+	("source", bpo::value<std::string>(&para.source),
 		"data source")
-	("field_path", bpo::value<std::string>(&para.field_path),
+	("field-path", bpo::value<std::string>(&para.field_path),
 		"Search path for field data")
-	("pdist_path", bpo::value<std::string>(&para.pdist_path),
+	("pdist-path", bpo::value<std::string>(&para.pdist_path),
 		"Search path for particle distribution")
-	("time_slice", bpo::value<unsigned int>(&para.time_slice)->
+	("time", bpo::value<unsigned int>(&para.time)->
 		default_value(1), "Time slice")
 	("Bx", bpo::value<std::string>(&para.Bx), "Bx data file")
 	("By", bpo::value<std::string>(&para.By), "By data file")
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
 	para.Update();
 
-	if ((para.origin == "LANL") && (!para.Check_LANL_Info_File()))
+	if ((para.source == "LANL") && (!para.Check_LANL_Info_File()))
 		exit(EXIT_FAILURE);
 
 // Load EM fields from file
@@ -126,34 +126,45 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_SUCCESS);
 	}
 
-	unsigned int c;
 	bool plot = false;
 	if (vm.count("plot-Bx")) {
-		plot = true; c = 0;
+		plot = true;
+		field.Get_F = &EMField::Get_Bx;
 	}
 	if (vm.count("plot-By")) {
-		plot = true; c = 1;
+		plot = true;
+		field.Get_F = &EMField::Get_By;
 	}
 	if (vm.count("plot-Bz")) {
-		plot = true; c = 2;
+		plot = true;
+		field.Get_F = &EMField::Get_Bz;
 	}
 	if (vm.count("plot-Ex")) {
-		plot = true; c = 3;
+		plot = true;
+		field.Get_F = &EMField::Get_Ex;
 	}
 	if (vm.count("plot-Ey")) {
-		plot = true; c = 4;
+		plot = true;
+		field.Get_F = &EMField::Get_Ey;
 	}
 	if (vm.count("plot-Ez")) {
-		plot = true; c = 5;
+		plot = true;
+		field.Get_F = &EMField::Get_Ez;
 	}
 	if (vm.count("plot-B")) {
-		plot = true; c = 10;
+		plot = true;
+		field.Get_F = &EMField::Get_B;
 	}
 	if (vm.count("plot-E")) {
-		plot = true; c = 11;
+		plot = true;
+		field.Get_F = &EMField::Get_E;
 	}
 	if (plot) {
-		pyplot (field, c, para.nz, para.nx);
+		double *A = new double [para.rsize];
+		for (unsigned int i = 0; i < para.rsize; ++i)
+			A[i] = field.Get_FF(i);	
+		pyplot (A, para.nz, para.nx);
+		delete [] A;
 		exit(EXIT_SUCCESS);
 	}
 
