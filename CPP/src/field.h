@@ -1,3 +1,4 @@
+#include "array2D.h"
 #include "para.h"
 
 #ifndef EMFIELD_H
@@ -14,9 +15,14 @@ class EMField {
 public:
 	EMField(const Parameter &);
 	~EMField();
+
+	void (EMField::*Update_Ptr)(int, int);
+	void Update(int, int);
+
+	void Update_LANL(int, int);
+	void Update_NASA(int, int);
 // get fields at any point
-//	double get_B(const double[]);
-//	double get_E(const double[]);
+	double* Get_Fa(const double [3]);
 
 // get fields at the sites
 	double Get_Bx(unsigned int) const;
@@ -34,10 +40,15 @@ public:
 	}
 
 private:
-	unsigned int rsize, skip;
-	float *_F[N_OF_FIELDS];
+	unsigned int rsize;
+	std::string field_path, dataf[6];
 
-	void Read_From_File(std::string, unsigned int);
+	Array2D<float> F_[N_OF_FIELDS];
+	Array2D<float> Fa_[N_OF_FIELDS];
+	Array2D<float> Fb_[N_OF_FIELDS];
+
+	void Read_From_NASA_File(int, Array2D<float> []);
+	void Read_From_LANL_File(int, Array2D<float> []);
 
 //friend void pyplot (const EMField &, int, int, int);
 };

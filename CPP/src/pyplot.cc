@@ -1,20 +1,22 @@
-#include "Python.h"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include "numpy/arrayobject.h"
-#include "field.h"
+#include "pyplot.h"
 
 
-void pyplot(double* A, int x, int y)
-{
-	PyObject *pName, *pModule, *pDict, *pFunc, *pFuncCB, *pArgs, *pGraph;
-	PyObject *py_array;
-	npy_intp dims[2] = { x, y };
-
+PyPlot::PyPlot() {
 	Py_Initialize();
-
 	PyRun_SimpleString("import pylab");
 	pName = PyString_FromString ("pylab");
 	pModule = PyImport_Import (pName);
+}
+
+PyPlot::~PyPlot() {
+	Py_Finalize();
+}
+
+void PyPlot::Plot(double* A, int x, int y)
+{
+	PyObject *py_array;
+	npy_intp dims[2] = { x, y };
+
 /*
 	pDict = PyModule_GetDict(pModule);
 	pFunc = PyDict_GetItemString (pDict, "pcolormesh");
@@ -36,7 +38,5 @@ void pyplot(double* A, int x, int y)
 
 	PyRun_SimpleString("pylab.axis('tight')");
 	PyRun_SimpleString("pylab.show()");
-
-	Py_Exit(0);
 }
 

@@ -115,16 +115,31 @@ int main(int argc, char *argv[]) {
 
 	para.Update();
 
+	if (vm.count("dump")) {
+		para.Dump_Conf_Para(vm);
+		exit(EXIT_SUCCESS);
+	}
+
 	if ((para.source == "LANL") && (!para.Check_LANL_Info_File()))
 		exit(EXIT_FAILURE);
 
 // Load EM fields from file
 	EMField field(para);
+	PyPlot pp;
 
-	if (vm.count("dump")) {
-		para.Dump_Conf_Para(vm);
-		exit(EXIT_SUCCESS);
-	}
+	int i,j;
+	double *A = new double [para.rsize];
+
+	if (para.source == "LANL") field.Update(1,1);
+
+	if (para.source == "NASA") field.Update(1750,1725);
+
+	double r[3] = {459.3,0,349.1};
+	std::cout << "Fa:\n";
+	field.Get_Fa(r);
+
+	for (j = 1750; j >=1000; j-=25) {
+		field.Update(j,j);
 
 	bool plot = false;
 	if (vm.count("plot-Bx")) {
@@ -160,15 +175,17 @@ int main(int argc, char *argv[]) {
 		field.Get_F = &EMField::Get_E;
 	}
 	if (plot) {
-		double *A = new double [para.rsize];
-		for (unsigned int i = 0; i < para.rsize; ++i)
+		for (i = 0; i < para.rsize; ++i)
 			A[i] = field.Get_FF(i);	
-		pyplot (A, para.nz, para.nx);
-		delete [] A;
-		exit(EXIT_SUCCESS);
+		std::cerr << "plotting ...\n";
+		pp.Plot (A, para.nz, para.nx);
+//		exit(EXIT_SUCCESS);
 	}
+	}
+		delete [] A;
 
 	Distribution distf(para);
 
 	ParticleTracer pt(field,distf,para);
+
 }
