@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cstdio>
 
 #ifndef ARRAY2D_H
 #define ARRAY2D_H

@@ -61,9 +61,12 @@ class ParticleDistribution:
 		print self.data['ic']
 
 	def __str__(self):
-		s = '\nBin location: '
-		s += 'x=(%4g,%4g), z=(%4g,%4g)\n\n' % (self.data['xlo'],
+		s = '\n'
+		s += 'Bin location: '
+		s += 'x=(%4g,%4g), z=(%4g,%4g)\n' % (self.data['xlo'],
 			self.data['xhi'],self.data['zlo'],self.data['zhi'])
+		s += 'Axes max: %4g\n' % self.data['axes'][0][-1]
+		s += '\n'
 		for i in range(self.nsp):
 			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
 				self.data['vxa'][i], self.data['vya'][i],
@@ -199,10 +202,9 @@ class Figure2D:
 		"""
 		title = name.replace(',','_')
 		self.figs.append((title,pylab.figure(title)))
-		ax = pylab.subplot('111')
 		fX,fY = numpy.meshgrid(X,X)
-		pcm = ax.pcolormesh(fX, fY, fZ)
-		ax.axis('tight')
+		pcm = pylab.pcolormesh(fX, fY, fZ)
+		pylab.axis('tight')
 		self.figs[-1][1].colorbar(pcm)
 		pylab.title(name)
 

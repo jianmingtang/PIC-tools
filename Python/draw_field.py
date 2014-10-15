@@ -194,6 +194,11 @@ if __name__ == "__main__":
 			grid = [1000, 1, 800]
 		L = [320., 0, 128.]
 		emf = FieldNASA(fname, grid)
+		print emf.data['xe']
+		print emf.data['ze']
+		print emf.data['mass']
+		print emf.data['q']
+		print emf.data['wpewce']
 
 	else:
 		print 'No source selected'

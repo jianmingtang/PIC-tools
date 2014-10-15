@@ -1,15 +1,5 @@
 #include <cmath>
-#include <iostream>
-#include <cstdio>
 #include "field.h"
-
-
-#define IBX 0
-#define IBY 1
-#define IBZ 2
-#define IEX 3
-#define IEY 4
-#define IEZ 5
 
 
 /**
@@ -23,14 +13,21 @@ EMField::~EMField() {
  */
 EMField::EMField(const Parameter &p) {
 
+	unsigned int i;
+
+	qom = -1.;
+	nxC = 1;
+	nyC = p.ny / 2;
+	nzC = p.nz / 2 + 1;
+	LxR = p.Lx / p.nx;
+	LyR = p.Ly / p.ny;
+	LzR = p.Lz / p.nz;
 	rsize = p.rsize;
 	field_path = p.field_path;
-	dataf[IBX] = p.Bx; dataf[IBY] = p.By; dataf[IBZ] = p.Bz;
-	dataf[IEX] = p.Ex; dataf[IEY] = p.Ey; dataf[IEZ] = p.Ez;
+	dataf[iBX] = p.Bx; dataf[iBY] = p.By; dataf[iBZ] = p.Bz;
+	dataf[iEX] = p.Ex; dataf[iEY] = p.Ey; dataf[iEZ] = p.Ez;
 
-	unsigned int i;
 	for (i = 0; i < N_OF_FIELDS; ++i) {
-		F_[i] = Array2D<float>(p.nz, p.nx);
 		Fa_[i] = Array2D<float>(p.nz, p.nx);
 		Fb_[i] = Array2D<float>(p.nz, p.nx);
 	}
@@ -47,17 +44,17 @@ EMField::EMField(const Parameter &p) {
  *  Update fields at two time slices
  */
 void EMField::Update(int ta, int tb) {
+	this->ta = ta;
+	this->tb = tb;
 	(this->*Update_Ptr)(ta, tb);
 } 
 
 void EMField::Update_LANL(int ta, int tb) {
-	Read_From_LANL_File(ta, F_);
 	Read_From_LANL_File(ta, Fa_);
 	Read_From_LANL_File(tb, Fb_);
 }
 
 void EMField::Update_NASA(int ta, int tb) {
-	Read_From_NASA_File(ta, F_);
 	Read_From_NASA_File(ta, Fa_);
 	Read_From_NASA_File(tb, Fb_);
 }
@@ -65,17 +62,18 @@ void EMField::Update_NASA(int ta, int tb) {
 /**
  *  Read one time slice from LANL files
  */
-void EMField::Read_From_LANL_File(int t, Array2D<float> F[]) {
+void EMField::Read_From_LANL_File(int t, Array2D<float> *F) {
 	unsigned int i;
 // Two additonal parameters (4 bytes each) at the end of each time slice
 	unsigned int skip = (rsize + 2) * DATA_SIZE * (t - 1);
-	std::string fname;
+	std::string fname, err;
 
 	for (i = 0; i < N_OF_FIELDS; ++i) {
 		std::string fname = field_path + "/" + dataf[i]; 
 		std::ifstream ifs(fname.c_str(), std::ios::binary);
 		if (!ifs) {
-			std::cerr << "File " << fname << " not found!\n"; 
+			err = "File " + fname + " not found!"; 
+			throw std::invalid_argument(err);
 		} else {
 			ifs.seekg(skip, ifs.beg);
 			ifs.read((char*)F[i][0], rsize * DATA_SIZE);  
@@ -87,17 +85,18 @@ void EMField::Read_From_LANL_File(int t, Array2D<float> F[]) {
 /**
  *  Read one time slice from a NASA file
  */
-void EMField::Read_From_NASA_File(int t, Array2D<float> F[]) {
+void EMField::Read_From_NASA_File(int t, Array2D<float> *F) {
 	unsigned int i;
 	static unsigned int skip = (rsize * 4 * 3 + 8) * DATA_SIZE;
 	char buf[9];
-	std::string fname;
+	std::string fname, err;
 
 	sprintf(buf, "%05d.dat", t);
 	fname = field_path + "/fields-" + buf;
 	std::ifstream ifs(fname.c_str(), std::ios::binary);
 	if (!ifs) {
-		std::cerr << "File " << fname << " not found!\n"; 
+		err = "File " + fname + " not found!"; 
+		throw std::invalid_argument(err);
 	} else {
 		ifs.seekg(skip, ifs.beg);
 		for (i = 0; i < N_OF_FIELDS; ++i)
@@ -106,77 +105,103 @@ void EMField::Read_From_NASA_File(int t, Array2D<float> F[]) {
 	}
 }
 
-// This should be in grid units
-// So that the conversion is done at the beginning and the end of simulation
-double* EMField::Get_Fa(const double r[3]) {
+void EMField::Set_Time(double t) {
+	wfa = (tb - t) / (tb - ta);
+	wfb = (t - ta) / (tb - ta);
+}
+
+void EMField::Get(double *f, double *r) const {
+
+	double fa[N_OF_FIELDS], fb[N_OF_FIELDS];
+
+	Get_fab(fa, r, Fa_);
+	Get_fab(fb, r, Fb_);
+	for (unsigned int i = 0; i < N_OF_FIELDS; ++i) {
+		f[i] = fa[i] * wfa + fb[i] * wfb;
+		f[i] = f[i] * qom;
+	}
+}
+
+inline unsigned int EMField::iX(double x) const {
+	return floor(x / LxR + nxC);
+}
+
+inline unsigned int EMField::iZ(double z) const {
+	return floor(z / LzR + nzC);
+}
+
+void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
+
 	unsigned int ix, iz, j;
 	double fx, fz;
 	double wmm, wmp, wpm, wpp;
-	double F[N_OF_FIELDS];
 
-	ix = (unsigned int)floor(r[0]);
-	iz = (unsigned int)floor(r[2]);
+	ix = iX(r[0]);
+	iz = iZ(r[2]);
+	if ((ix < 0) || (ix >= 1000))
+		std::cout << r[0] << " " << ix << std::endl;
+	if ((iz < 0) || (iz >= 800))
+		std::cout << iz << std::endl;
+	assert (ix >=0 && ix <1000);
+	assert (iz >=0 && iz <800);
 	fx = r[0] - ix;
 	fz = r[2] - iz;	
 	wmm = (1.-fx) * (1.-fz);
 	wpm = fx * (1.-fz);
 	wmp = (1.-fx) * fz;
 	wpp = fx * fz;
+/*
 // approx 1
 	for (j = 0; j < N_OF_FIELDS; ++j) {
-		std::cout << Fa_[j][iz][ix] << ", ";
+		std::cout << F[j][iz][ix] << ", ";
 	}
 	std::cout << std::endl;
 // approx 2
 	for (j = 0; j < N_OF_FIELDS; ++j) {
-		std::cout << Fa_[j][iz+1][ix+1] << ", ";
+		std::cout << F[j][iz+1][ix+1] << ", ";
 	}
 	std::cout << std::endl;
 // approx 3
 	for (j = 0; j < N_OF_FIELDS; ++j) {
-		F[j] = (wmm * Fa_[j][iz][ix]   +
-			wpm * Fa_[j][iz][ix+1] +
-			wmp * Fa_[j][iz+1][ix] +
-			wpp * Fa_[j][iz+1][ix+1]);
+		f[j] = (wmm * F[j][iz][ix]   +
+			wpm * F[j][iz][ix+1] +
+			wmp * F[j][iz+1][ix] +
+			wpp * F[j][iz+1][ix+1]);
 	}
 	for (j = 0; j < N_OF_FIELDS; ++j) {
-		std::cout << F[j] << ", ";
+		std::cout << f[j] << ", ";
 	}
 	std::cout << std::endl;
+*/
 // approx 4
-	F[IBX] = (wmm * (Fa_[IBX][iz-1][ix] + Fa_[IBX][iz][ix]    ) +
-		wpm * (Fa_[IBX][iz-1][ix+1] + Fa_[IBX][iz][ix+1]  ) +
-		wmp * (Fa_[IBX][iz][ix]     + Fa_[IBX][iz+1][ix]  ) +
-		wpp * (Fa_[IBX][iz][ix+1]   + Fa_[IBX][iz+1][ix+1])) * 0.5;
-	F[IBY] = (wmm * (Fa_[IBY][iz-1][ix-1] + Fa_[IBY][iz][ix-1]   +
-			Fa_[IBY][iz-1][ix]    + Fa_[IBY][iz][ix]     ) +
-		wpm * (Fa_[IBY][iz-1][ix]     + Fa_[IBY][iz][ix]     +
-			Fa_[IBY][iz-1][ix+1]  + Fa_[IBY][iz][ix+1]   ) +
-		wmp * (Fa_[IBY][iz][ix-1]     + Fa_[IBY][iz+1][ix-1] +
-			Fa_[IBY][iz][ix]      + Fa_[IBY][iz+1][ix]   ) +
-		wpp * (Fa_[IBY][iz][ix]       + Fa_[IBY][iz+1][ix]   +
-			Fa_[IBY][iz][ix+1]    + Fa_[IBY][iz+1][ix+1] )) * 0.25;
-	F[IBZ] = (wmm * (Fa_[IBZ][iz][ix-1] + Fa_[IBZ][iz][ix]    ) +
-		wpm * (Fa_[IBZ][iz][ix]     + Fa_[IBZ][iz][ix+1]  ) +
-		wmp * (Fa_[IBZ][iz+1][ix-1] + Fa_[IBZ][iz+1][ix]  ) +
-		wpp * (Fa_[IBZ][iz+1][ix]   + Fa_[IBZ][iz+1][ix+1])) * 0.5;
-	F[IEX] = (wmm * (Fa_[IEX][iz][ix-1] + Fa_[IEX][iz][ix]    ) +
-		wpm * (Fa_[IEX][iz][ix]     + Fa_[IEX][iz][ix+1]  ) +
-		wmp * (Fa_[IEX][iz+1][ix-1] + Fa_[IEX][iz+1][ix]  ) +
-		wpp * (Fa_[IEX][iz+1][ix]   + Fa_[IEX][iz+1][ix+1])) * 0.5;
-	F[IEY] = (wmm * Fa_[IEY][iz][ix] +
-		wpm * Fa_[IEY][iz][ix+1] +
-		wmp * Fa_[IEY][iz+1][ix] +
-		wpp * Fa_[IEY][iz+1][ix+1]);
-	F[IEZ] = (wmm * (Fa_[IEZ][iz-1][ix] + Fa_[IEZ][iz][ix]     ) +
-		wpm * (Fa_[IEZ][iz-1][ix+1] + Fa_[IEZ][iz][ix+1]   ) +
-		wmp * (Fa_[IEZ][iz][ix]     + Fa_[IEZ][iz+1][ix]   ) +
-		wpp * (Fa_[IEZ][iz][ix+1]   + Fa_[IEZ][iz+1][ix+1])) * 0.5;
-
-	for (j = 0; j < N_OF_FIELDS; ++j) {
-		std::cout << F[j] << ", ";
-	}
-	std::cout << std::endl;
+	f[iBX] = (wmm * (F[iBX][iz-1][ix] + F[iBX][iz][ix]    ) +
+		wpm * (F[iBX][iz-1][ix+1] + F[iBX][iz][ix+1]  ) +
+		wmp * (F[iBX][iz][ix]     + F[iBX][iz+1][ix]  ) +
+		wpp * (F[iBX][iz][ix+1]   + F[iBX][iz+1][ix+1])) * 0.5;
+	f[iBY] = (wmm * (F[iBY][iz-1][ix-1] + F[iBY][iz][ix-1]   +
+			F[iBY][iz-1][ix]    + F[iBY][iz][ix]     ) +
+		wpm * (F[iBY][iz-1][ix]     + F[iBY][iz][ix]     +
+			F[iBY][iz-1][ix+1]  + F[iBY][iz][ix+1]   ) +
+		wmp * (F[iBY][iz][ix-1]     + F[iBY][iz+1][ix-1] +
+			F[iBY][iz][ix]      + F[iBY][iz+1][ix]   ) +
+		wpp * (F[iBY][iz][ix]       + F[iBY][iz+1][ix]   +
+			F[iBY][iz][ix+1]    + F[iBY][iz+1][ix+1] )) * 0.25;
+	f[iBZ] = (wmm * (F[iBZ][iz][ix-1] + F[iBZ][iz][ix]    ) +
+		wpm * (F[iBZ][iz][ix]     + F[iBZ][iz][ix+1]  ) +
+		wmp * (F[iBZ][iz+1][ix-1] + F[iBZ][iz+1][ix]  ) +
+		wpp * (F[iBZ][iz+1][ix]   + F[iBZ][iz+1][ix+1])) * 0.5;
+	f[iEX] = (wmm * (F[iEX][iz][ix-1] + F[iEX][iz][ix]    ) +
+		wpm * (F[iEX][iz][ix]     + F[iEX][iz][ix+1]  ) +
+		wmp * (F[iEX][iz+1][ix-1] + F[iEX][iz+1][ix]  ) +
+		wpp * (F[iEX][iz+1][ix]   + F[iEX][iz+1][ix+1])) * 0.5;
+	f[iEY] = (wmm * F[iEY][iz][ix] +
+		wpm * F[iEY][iz][ix+1] +
+		wmp * F[iEY][iz+1][ix] +
+		wpp * F[iEY][iz+1][ix+1]);
+	f[iEZ] = (wmm * (F[iEZ][iz-1][ix] + F[iEZ][iz][ix]     ) +
+		wpm * (F[iEZ][iz-1][ix+1] + F[iEZ][iz][ix+1]   ) +
+		wmp * (F[iEZ][iz][ix]     + F[iEZ][iz+1][ix]   ) +
+		wpp * (F[iEZ][iz][ix+1]   + F[iEZ][iz+1][ix+1])) * 0.5;
 }
 
 double EMField::Get_Bx(unsigned int i) const {

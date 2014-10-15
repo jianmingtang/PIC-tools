@@ -7,23 +7,17 @@
 
 namespace bpo = boost::program_options;
 
-class ParaPIC {
+class Parameter {
 public:
 	unsigned int time;
 	std::string Bx, By, Bz, Ex, Ey, Ez;
 	double Lx, Ly, Lz;
 	unsigned int nx, ny, nz;
-};
+	double rfac, vfac;
 
-class ParaPT {
-public:
 	unsigned int Np, step;
 	std::string output_path;
-	void Read_From_File();
-};
 
-class Parameter: public ParaPT, public ParaPIC {
-public:
 	std::string source;
 	unsigned int rsize;
 	std::string field_path, pdist_path;
@@ -34,11 +28,8 @@ public:
 
 	Parameter() {}
 	~Parameter() {}
-//	Parameter(int argc, char *argv[]) : ParaBPO(argc,argv) {}
 
 private:
-
-	void Read_From_File();
 
 };
 

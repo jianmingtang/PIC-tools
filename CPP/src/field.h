@@ -7,6 +7,13 @@
 #define DATA_SIZE 4
 #define N_OF_FIELDS 6
 
+#define iBX 0
+#define iBY 1
+#define iBZ 2
+#define iEX 3
+#define iEY 4
+#define iEZ 5
+
 
 /**
  *   This class stores the EM field data
@@ -22,7 +29,8 @@ public:
 	void Update_LANL(int, int);
 	void Update_NASA(int, int);
 // get fields at any point
-	double* Get_Fa(const double [3]);
+	void Set_Time(double);
+	void Get(double *, double *) const;
 
 // get fields at the sites
 	double Get_Bx(unsigned int) const;
@@ -40,6 +48,13 @@ public:
 	}
 
 private:
+	// two time slices and their relative weights
+	double ta, tb, wfa, wfb;
+	// charge to mass ratio
+	double qom;
+	// length to grid ratio
+	double LxR, LyR, LzR;
+	unsigned int nxC, nyC, nzC;
 	unsigned int rsize;
 	std::string field_path, dataf[6];
 
@@ -50,6 +65,10 @@ private:
 	void Read_From_NASA_File(int, Array2D<float> []);
 	void Read_From_LANL_File(int, Array2D<float> []);
 
+	void Get_fab(double *, double *, const Array2D<float> *) const;
+
+	inline unsigned int iX(double) const;
+	inline unsigned int iZ(double) const;
 //friend void pyplot (const EMField &, int, int, int);
 };
 

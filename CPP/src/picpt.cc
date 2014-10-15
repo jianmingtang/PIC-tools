@@ -23,7 +23,7 @@
 #include "config.h"
 #include "para.h"
 #include "field.h"
-#include "dist.h"
+#include "particle.h"
 #include "tracer.h"
 #include "pyplot.h"
 
@@ -82,6 +82,8 @@ int main(int argc, char *argv[]) {
 	tOpt.add_options()
 	("Np", bpo::value<unsigned int>(&para.Np), "number of particles")
 	("steps", bpo::value<unsigned int>(&para.step), "number of steps")
+	("output-path", bpo::value<std::string>(&para.output_path)->
+		default_value("./"), "Output path for particle trace")
 	;
 	allOpt.add(cOpt).add(fOpt).add(tOpt);
 	confOpt.add(fOpt).add(tOpt);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
 			std::cout << "\nUsage: " << PROGRAM_NAME
 				<< " [options]\n";
 			std::cout << allOpt <<"\n";
-			exit(EXIT_SUCCESS);
+			return EXIT_SUCCESS;
 		}
 
 		std::ifstream ifs(conffile.c_str());
@@ -103,89 +105,40 @@ int main(int argc, char *argv[]) {
 			std::cout << PACKAGE_STRING << "\n\n";
 			std::cout << "Missing configuration file. ";
 			std::cout << "Use -h for help.\n";
-			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
 		} else {
 			bpo::store(bpo::parse_config_file(ifs, confOpt), vm);
 			bpo::notify(vm);
 		}	
 	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	para.Update();
 
 	if (vm.count("dump")) {
 		para.Dump_Conf_Para(vm);
-		exit(EXIT_SUCCESS);
+		return EXIT_SUCCESS;
 	}
 
 	if ((para.source == "LANL") && (!para.Check_LANL_Info_File()))
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 
 // Load EM fields from file
 	EMField field(para);
-	PyPlot pp;
 
-	int i,j;
-	double *A = new double [para.rsize];
+	Particle pi(para);
 
-	if (para.source == "LANL") field.Update(1,1);
+	ParticleTracer pt(field, pi, para);
+	try {
+		pt.Run(1750,1000,-0.05);
+	} catch (const std::exception& err) {
+		std::cerr << err.what() << std::endl;
+		return EXIT_FAILURE;
+	}
 
-	if (para.source == "NASA") field.Update(1750,1725);
+	pt.Write(para.output_path + "t.txt", para);
 
-	double r[3] = {459.3,0,349.1};
-	std::cout << "Fa:\n";
-	field.Get_Fa(r);
-
-	for (j = 1750; j >=1000; j-=25) {
-		field.Update(j,j);
-
-	bool plot = false;
-	if (vm.count("plot-Bx")) {
-		plot = true;
-		field.Get_F = &EMField::Get_Bx;
-	}
-	if (vm.count("plot-By")) {
-		plot = true;
-		field.Get_F = &EMField::Get_By;
-	}
-	if (vm.count("plot-Bz")) {
-		plot = true;
-		field.Get_F = &EMField::Get_Bz;
-	}
-	if (vm.count("plot-Ex")) {
-		plot = true;
-		field.Get_F = &EMField::Get_Ex;
-	}
-	if (vm.count("plot-Ey")) {
-		plot = true;
-		field.Get_F = &EMField::Get_Ey;
-	}
-	if (vm.count("plot-Ez")) {
-		plot = true;
-		field.Get_F = &EMField::Get_Ez;
-	}
-	if (vm.count("plot-B")) {
-		plot = true;
-		field.Get_F = &EMField::Get_B;
-	}
-	if (vm.count("plot-E")) {
-		plot = true;
-		field.Get_F = &EMField::Get_E;
-	}
-	if (plot) {
-		for (i = 0; i < para.rsize; ++i)
-			A[i] = field.Get_FF(i);	
-		std::cerr << "plotting ...\n";
-		pp.Plot (A, para.nz, para.nx);
-//		exit(EXIT_SUCCESS);
-	}
-	}
-		delete [] A;
-
-	Distribution distf(para);
-
-	ParticleTracer pt(field,distf,para);
-
+	return EXIT_SUCCESS;
 }

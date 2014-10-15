@@ -1,16 +1,26 @@
+#include <vector>
 #include "para.h"
 #include "field.h"
-#include "dist.h"
+#include "particle.h"
 
-#ifndef PARTICLE_TRACER_H
-#define PARTICLE_TRACER_H
+#ifndef PARTICLE_TRACE_H
+#define PARTICLE_TRACE_H
 
 class ParticleTracer {
 public:
-	ParticleTracer(const EMField &, const Distribution &,
-		const Parameter &);
+	ParticleTracer(EMField &, const Particle &, const Parameter &);
 	~ParticleTracer() {}
+
+	void Run(double, double, double);
+	void Write(std::string, const Parameter &);
+
 private:
+	unsigned int Np;
+	double rfac, vfac;
+	EMField *field;
+	std::vector<Particle> pt;
+
+	void Move_One_Time_Step(double, double*, double*);
 };
 
-#endif /* PARTICLE_TRACER_H */
+#endif /* PARTICLE_TRACE_H */
