@@ -47,7 +47,7 @@ bool Parameter::Check_LANL_Info_File() const {
 void Parameter::Update() {
 	rsize = nx * nz;
 	rfac = sqrt(25.);
-	vfac = sqrt(25.)*2.;
+	vfac = 0.5/sqrt(25.);
 }
 
 

@@ -18,10 +18,10 @@ EMField::EMField(const Parameter &p) {
 	qom = -1.;
 	nxC = 1;
 	nyC = p.ny / 2;
-	nzC = p.nz / 2 + 1;
-	LxR = p.Lx / p.nx;
+	nzC = p.nz / 2;
+	LxR = p.Lx / (p.nx - 1);
 	LyR = p.Ly / p.ny;
-	LzR = p.Lz / p.nz;
+	LzR = p.Lz / (p.nz - 1);
 	rsize = p.rsize;
 	field_path = p.field_path;
 	dataf[iBX] = p.Bx; dataf[iBY] = p.By; dataf[iBZ] = p.Bz;
@@ -122,6 +122,14 @@ void EMField::Get(double *f, double *r) const {
 	}
 }
 
+inline double EMField::scaleX(double x) const {
+	return x / LxR + nxC;
+}
+
+inline double EMField::scaleZ(double z) const {
+	return z / LzR + nzC;
+}
+
 inline unsigned int EMField::iX(double x) const {
 	return floor(x / LxR + nxC);
 }
@@ -136,20 +144,26 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 	double fx, fz;
 	double wmm, wmp, wpm, wpp;
 
-	ix = iX(r[0]);
-	iz = iZ(r[2]);
+	fx = scaleX(r[0]);
+	fz = scaleZ(r[2]);
+	ix = floor(fx);
+	iz = floor(fz);
 	if ((ix < 0) || (ix >= 1000))
 		std::cout << r[0] << " " << ix << std::endl;
 	if ((iz < 0) || (iz >= 800))
 		std::cout << iz << std::endl;
 	assert (ix >=0 && ix <1000);
 	assert (iz >=0 && iz <800);
-	fx = r[0] - ix;
-	fz = r[2] - iz;	
+	fx -= ix;
+	fz -= iz;	
 	wmm = (1.-fx) * (1.-fz);
 	wpm = fx * (1.-fz);
 	wmp = (1.-fx) * fz;
 	wpp = fx * fz;
+	assert(wmm>0);
+	assert(wpm>0);
+	assert(wmp>0);
+	assert(wpp>0);
 /*
 // approx 1
 	for (j = 0; j < N_OF_FIELDS; ++j) {
@@ -161,17 +175,15 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 		std::cout << F[j][iz+1][ix+1] << ", ";
 	}
 	std::cout << std::endl;
+*/
 // approx 3
+/*
 	for (j = 0; j < N_OF_FIELDS; ++j) {
 		f[j] = (wmm * F[j][iz][ix]   +
 			wpm * F[j][iz][ix+1] +
 			wmp * F[j][iz+1][ix] +
 			wpp * F[j][iz+1][ix+1]);
 	}
-	for (j = 0; j < N_OF_FIELDS; ++j) {
-		std::cout << f[j] << ", ";
-	}
-	std::cout << std::endl;
 */
 // approx 4
 	f[iBX] = (wmm * (F[iBX][iz-1][ix] + F[iBX][iz][ix]    ) +

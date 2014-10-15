@@ -1,5 +1,7 @@
 #include<iostream>
+#include <boost/numeric/odeint/integrate/integrate.hpp>
 #include "tracer.h"
+
 
 #define iRx 0
 #define iRy 1
@@ -9,19 +11,22 @@
 #define iVz 5
 
 
+using namespace boost::numeric;
+
+
 ParticleTracer::ParticleTracer(EMField &f, const Particle &pi,
 		const Parameter &p) {
 	this->field = &f;
-	this->Np = pi.Np;
+	this->Np = p.Np;
 	pt.push_back(pi);
 }
 
 void Check_Bounds(double *x) {
 }
 
-void ParticleTracer::Run(double ti, double tf, double dt) {
-	Particle a(Np);
-	double t = ti;
+void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
+	Particle a(p);
+	double t = ti, dt = p.ts;
 	double *x;
 	int j = 0;
 	bool stop = false;
@@ -29,12 +34,13 @@ void ParticleTracer::Run(double ti, double tf, double dt) {
 		field->Update(i,i-25);
 		while (t >= i-25) {
 			std::cout << t << " \n";
-			a = Particle(Np);
+			a = Particle(p);
 			pt.push_back(a);
 			field->Set_Time(t);
-			Move_One_Time_Step(dt, &pt[j].data[0], &pt[j+1].data[0]);
-			x = &pt[j++].data[0];
-			if ((abs(x[0]) > 160) || (abs(x[2]) > 64)) {
+			Move_One_Time_Step(dt, &(pt[j][0]),
+				&(pt[j+1][0]), &pt[j].f[0]);
+			x = &(pt[j++][0]);
+			if (x[0] < 0 || x[0] > 320 || abs(x[2]) > 64) {
 				stop = true;
 				break;
 			}
@@ -47,12 +53,12 @@ void ParticleTracer::Run(double ti, double tf, double dt) {
 
 void ParticleTracer::Write(std::string fname, const Parameter &p) {
 	std::ofstream ofs(fname.c_str());
-	for (unsigned int i = 0; i < pt.size(); ++i) {
-		for (unsigned int j = 0; j < Np; ++j) {
-			for (unsigned int k = 0; k < 3; ++k)
-				ofs << pt[i].data[j*6+k]/p.rfac << " ";
-			for (unsigned int k = 3; k < 6; ++k)
-				ofs << pt[i].data[j*6+k]/p.vfac << " ";
+	for (size_t i = 0; i < pt.size(); ++i) {
+		for (size_t j = 0; j < Np; ++j) {
+			for (size_t k = 0; k < N_COORDS; ++k)
+				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
+			for (size_t k = N_COORDS; k < N_DIMS; ++k)
+				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
 		}
 		ofs << "\n";
 	}
@@ -60,20 +66,20 @@ void ParticleTracer::Write(std::string fname, const Parameter &p) {
 }
 
 // Boris Procedure
-void ParticleTracer::Move_One_Time_Step(double dt, double *xi, double *xo) {
+void ParticleTracer::Move_One_Time_Step(double dt, double *xi, double *xo, double *f) {
 
-	unsigned int i, j;
+	size_t i, j;
 	double dt2 = dt/2;
-	double f[N_OF_FIELDS];
+//	double f[N_OF_FIELDS];
 	double hm, vxm, vym, vzm, ux, uy, uz;
 
 	for (i = 0; i < Np; i++) {
 		j = i * 6;
 		field->Get(f, &xi[j]);
 		hm = (f[iBX]*f[iBX]+f[iBY]*f[iBY] + f[iBZ]*f[iBZ]) * dt2*dt2;
-		vxm = (xi[j+iRx] + f[iEX] * dt2);
-		vym = (xi[j+iRy] + f[iEY] * dt2);
-		vzm = (xi[j+iRz] + f[iEZ] * dt2);
+		vxm = (xi[j+iVx] + f[iEX] * dt2);
+		vym = (xi[j+iVy] + f[iEY] * dt2);
+		vzm = (xi[j+iVz] + f[iEZ] * dt2);
 		ux = vxm + (vym * f[iBZ] - vzm * f[iBY]) * dt2;
 		uy = vym + (vzm * f[iBX] - vxm * f[iBZ]) * dt2;
 		uz = vzm + (vxm * f[iBY] - vym * f[iBX]) * dt2;

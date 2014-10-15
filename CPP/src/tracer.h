@@ -11,7 +11,7 @@ public:
 	ParticleTracer(EMField &, const Particle &, const Parameter &);
 	~ParticleTracer() {}
 
-	void Run(double, double, double);
+	void Run(double, double, const Parameter &);
 	void Write(std::string, const Parameter &);
 
 private:
@@ -20,7 +20,7 @@ private:
 	EMField *field;
 	std::vector<Particle> pt;
 
-	void Move_One_Time_Step(double, double*, double*);
+	void Move_One_Time_Step(double, double*, double*, double *);
 };
 
 #endif /* PARTICLE_TRACE_H */

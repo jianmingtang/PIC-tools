@@ -69,6 +69,8 @@ private:
 
 	inline unsigned int iX(double) const;
 	inline unsigned int iZ(double) const;
+	inline double scaleX(double) const;
+	inline double scaleZ(double) const;
 //friend void pyplot (const EMField &, int, int, int);
 };
 

@@ -9,13 +9,14 @@ namespace bpo = boost::program_options;
 
 class Parameter {
 public:
-	unsigned int time;
+	size_t time;
 	std::string Bx, By, Bz, Ex, Ey, Ez;
 	double Lx, Ly, Lz;
-	unsigned int nx, ny, nz;
+	size_t nx, ny, nz;
 	double rfac, vfac;
 
-	unsigned int Np, step;
+	size_t Np, step;
+	double ts;
 	std::string output_path;
 
 	std::string source;

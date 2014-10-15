@@ -1,24 +1,19 @@
 #include "particle.h"
 
 Particle::Particle(const Parameter &p) {
-	Np = 1;
-	data = std::vector<double>(6);
-	data[0] = 32. * p.rfac;
-	data[1] = 0. * p.rfac;
-	data[2] = -0.32 * p.rfac;
-	data[3] = 0. * p.vfac;
-	data[4] = -3.5 * p.vfac;
-	data[5] = 0. * p.vfac;
+	Np = p.Np;
+	data = std::vector<double>(p.Np * N_DIMS);
+	f = std::vector<double>(p.Np * N_DIMS);
 }
 
-Particle::Particle(unsigned int N) {
-	Np = N;
-	data = std::vector<double>(N*6);
-}
-
-Particle::Particle(double x[], unsigned int N) {
-	Np = N;
-	data = std::vector<double>(N*6);
-	for (unsigned int i = 0; i < N * 6; ++i)
-		data[i] = x[i];
+Particle::Particle(const Parameter &p, double *x) {
+	Np = p.Np;
+	data = std::vector<double>(p.Np * N_DIMS);
+	f = std::vector<double>(p.Np * N_DIMS);
+	for (size_t i = 0; i < p.Np; ++i) {
+		for (size_t j = 0; j < N_COORDS; ++j)
+			data[i*N_DIMS+j] = x[i*N_DIMS+j] * p.rfac;
+		for (size_t j = N_COORDS; j < N_DIMS; ++j)
+			data[i*N_DIMS+j] = x[i*N_DIMS+j] * p.vfac;
+	}
 }

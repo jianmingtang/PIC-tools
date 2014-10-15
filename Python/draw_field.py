@@ -103,7 +103,7 @@ class Figure2D:
 		# self.fig stores a list of figure objects
 		self.figs = []
 
-	def add_one(self, name, fZ, L, grid):
+	def add_one(self, name, fZ, X, Y):
 		"""
 		Create a 1-panel figure
 		name: title of the figure
@@ -112,12 +112,9 @@ class Figure2D:
 		"""
 		title = name.replace(' ','_')
 		self.figs.append((title,pylab.figure(title)))
-		ax = pylab.subplot('111')
-		X = numpy.linspace(-L[0]/2,L[0]/2,grid[0])
-		Y = numpy.linspace(-L[2]/2,L[2]/2,grid[2])
 		fX,fY = numpy.meshgrid(X,Y)
-		pcm = ax.pcolormesh(fX, fY, fZ)
-		ax.axis('tight')
+		pcm = pylab.pcolormesh(fX, fY, fZ)
+		pylab.axis('tight')
 		self.figs[-1][1].colorbar(pcm)
 		pylab.title(name)
 
@@ -183,6 +180,8 @@ if __name__ == "__main__":
 			grid, L = read_from_info(info_file)
 
 		emf = FieldLANL(datafiles, grid, int(args.time))
+		X = numpy.linspace(-L[0]/2,L[0]/2,grid[0])
+		Y = numpy.linspace(-L[2]/2,L[2]/2,grid[2])
 
 	elif args.source == 'NASA':
 		fname = args.datapath + '/fields-'
@@ -192,10 +191,10 @@ if __name__ == "__main__":
 			grid = map(int, args.grid.strsplit(','))
 		else:
 			grid = [1000, 1, 800]
-		L = [320., 0, 128.]
+#		L = [320., 0, 128.]
 		emf = FieldNASA(fname, grid)
-		print emf.data['xe']
-		print emf.data['ze']
+		X = emf.data['xe']
+		Y = emf.data['ze']
 		print emf.data['mass']
 		print emf.data['q']
 		print emf.data['wpewce']
@@ -211,7 +210,7 @@ if __name__ == "__main__":
 		fcomp = ['Ex','Ey','Ez']
 	for f in fcomp:
 		fig.add_one(args.source + ' ' + f + ' ' + args.time,
-			emf.data[f], L, grid)
+			emf.data[f], X, Y)
 
 	pylab.show()
 	if args.save_png: fig.savefig()

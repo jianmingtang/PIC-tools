@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 		"Search path for field data")
 	("pdist-path", bpo::value<std::string>(&para.pdist_path),
 		"Search path for particle distribution")
-	("time", bpo::value<unsigned int>(&para.time)->
+	("time", bpo::value<size_t>(&para.time)->
 		default_value(1), "Time slice")
 	("Bx", bpo::value<std::string>(&para.Bx), "Bx data file")
 	("By", bpo::value<std::string>(&para.By), "By data file")
@@ -75,13 +75,16 @@ int main(int argc, char *argv[]) {
 	("Lx", bpo::value<double>(&para.Lx), "Lx/de")
 	("Ly", bpo::value<double>(&para.Ly), "Ly/de")
 	("Lz", bpo::value<double>(&para.Lz), "Lz/de")
-	("nx", bpo::value<unsigned int>(&para.nx), "nx")
-	("ny", bpo::value<unsigned int>(&para.ny), "ny")
-	("nz", bpo::value<unsigned int>(&para.nz), "nz")
+	("nx", bpo::value<size_t>(&para.nx), "nx")
+	("ny", bpo::value<size_t>(&para.ny), "ny")
+	("nz", bpo::value<size_t>(&para.nz), "nz")
 	;
 	tOpt.add_options()
-	("Np", bpo::value<unsigned int>(&para.Np), "number of particles")
-	("steps", bpo::value<unsigned int>(&para.step), "number of steps")
+	("Np", bpo::value<size_t>(&para.Np)->
+		default_value(1), "number of particles")
+	("ts", bpo::value<double>(&para.ts)->
+		default_value(-0.05), "number of steps")
+	("steps", bpo::value<size_t>(&para.step), "number of steps")
 	("output-path", bpo::value<std::string>(&para.output_path)->
 		default_value("./"), "Output path for particle trace")
 	;
@@ -128,11 +131,13 @@ int main(int argc, char *argv[]) {
 // Load EM fields from file
 	EMField field(para);
 
-	Particle pi(para);
+	para.Np = 2;
+	double x[12] = {32.,0,-0.32,3.,0,0, 32.,0,-0.32,0,0,2.};
+	Particle pi(para, x);
 
 	ParticleTracer pt(field, pi, para);
 	try {
-		pt.Run(1750,1000,-0.05);
+		pt.Run(1750,1000,para);
 	} catch (const std::exception& err) {
 		std::cerr << err.what() << std::endl;
 		return EXIT_FAILURE;
