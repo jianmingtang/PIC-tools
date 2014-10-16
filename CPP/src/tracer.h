@@ -9,7 +9,6 @@
 class ParticleTracer {
 public:
 	ParticleTracer(EMField &, const Particle &, const Parameter &);
-	~ParticleTracer() {}
 
 	void Run(double, double, const Parameter &);
 	void Write(std::string, const Parameter &);

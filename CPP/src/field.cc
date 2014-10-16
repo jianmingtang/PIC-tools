@@ -3,12 +3,6 @@
 
 
 /**
- *  Destructor
- */
-EMField::~EMField() {
-}
-
-/**
  *  Constructor
  */
 EMField::EMField(const Parameter &p) {
@@ -38,6 +32,12 @@ EMField::EMField(const Parameter &p) {
 	if (p.source == "NASA") {
 		Update_Ptr = & EMField::Update_NASA;
 	}
+}
+
+/**
+ *  Destructor
+ */
+EMField::~EMField() {
 }
 
 /**

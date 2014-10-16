@@ -2,6 +2,24 @@
 #include "para.h"
 
 
+void Parameter::Split(const std::string &s,
+		const char delim, std::vector<std::string> &sublist) {
+	std::stringstream ss(s);
+	std::string sub;
+	while (std::getline(ss, sub, delim)) {
+		sublist.push_back(sub);
+	}
+}
+
+void Parameter::Update() {
+	nvxyz = nvx * nvy * nvz;
+	if (nvxyz != 0) Np = nvxyz;
+
+	rsize = nx * nz;
+	rfac = sqrt(25.);
+	vfac = 0.5/sqrt(25.);
+}
+
 bool neq(double a, double b) {
 	if (fabs(a-b) > 1.e-3) return true;
 	else return false;
@@ -44,12 +62,6 @@ bool Parameter::Check_LANL_Info_File() const {
 	}
 }
 
-void Parameter::Update() {
-	rsize = nx * nz;
-	rfac = sqrt(25.);
-	vfac = 0.5/sqrt(25.);
-}
-
 
 /// Print out simulation parameters.
 /** 
@@ -59,7 +71,7 @@ void Parameter::Update() {
 void Parameter::Dump_Conf_Para (bpo::variables_map &vm) {
 	bpo::variables_map::iterator i;
 	bpo::variable_value v;
-	unsigned int val_i;
+	size_t val_i;
 	double val_d;
 	std::string val_s;
 // needs to exclude control input later
@@ -69,8 +81,8 @@ void Parameter::Dump_Conf_Para (bpo::variables_map &vm) {
 		v = i->second;
 		if (!v.empty()) {
 			const std::type_info& v_type = v.value().type();
-			if (v_type == typeid(unsigned int)) {
-				val_i = v.as<unsigned int>();
+			if (v_type == typeid(size_t)) {
+				val_i = v.as<size_t>();
 				std::cout << val_i << "\n";
 			} else if (v_type == typeid(double)) {
 				val_d = v.as<double>();

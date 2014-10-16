@@ -1,4 +1,4 @@
-#include<iostream>
+#include <iostream>
 #include <boost/numeric/odeint/integrate/integrate.hpp>
 #include "tracer.h"
 
@@ -25,12 +25,12 @@ void Check_Bounds(double *x) {
 }
 
 void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
-	Particle a(p);
+	Particle a;
 	double t = ti, dt = p.ts;
 	double *x;
 	int j = 0;
 	bool stop = false;
-	for (int i = 1750; i > 1000; i-=25) {
+	for (int i = 1750; i > 1250; i-=25) {
 		field->Update(i,i-25);
 		while (t >= i-25) {
 			std::cout << t << " \n";
@@ -49,24 +49,41 @@ void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
 		}
 		if (stop) break;
 	}
+	std::cout << pt.size() << std::endl;
 } 
 
 void ParticleTracer::Write(std::string fname, const Parameter &p) {
-	std::ofstream ofs(fname.c_str());
+	std::fstream ofs(fname.c_str());
+	if (ofs) {
+		ofs.close();
+		std::string ans;
+		std::cout << "File " << fname << " exist. Overwrite (y/n)? ";
+		std::cin >> ans;
+		if (ans != "y" && ans != "Y")
+			throw std::invalid_argument("Data not saved!!!");
+		else
+			ofs.open(fname.c_str(), std::ios::out|std::ios::trunc);
+
+	} else
+		ofs.open(fname.c_str(), std::ios::out);
+
 	for (size_t i = 0; i < pt.size(); ++i) {
-		for (size_t j = 0; j < Np; ++j) {
-			for (size_t k = 0; k < N_COORDS; ++k)
+		for (size_t j = 0; j < p.Np; ++j) {
+			for (size_t k = 0; k < N_COORDS; ++k) {
 				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
+			}
 			for (size_t k = N_COORDS; k < N_DIMS; ++k)
 				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
 		}
 		ofs << "\n";
 	}
 	ofs.close();
+	std::cout << "Data saved to " << fname << ".\n";
 }
 
 // Boris Procedure
-void ParticleTracer::Move_One_Time_Step(double dt, double *xi, double *xo, double *f) {
+void ParticleTracer::Move_One_Time_Step(double dt, double *xi,
+		double *xo, double *f) {
 
 	size_t i, j;
 	double dt2 = dt/2;
@@ -74,7 +91,7 @@ void ParticleTracer::Move_One_Time_Step(double dt, double *xi, double *xo, doubl
 	double hm, vxm, vym, vzm, ux, uy, uz;
 
 	for (i = 0; i < Np; i++) {
-		j = i * 6;
+		j = i * N_DIMS;
 		field->Get(f, &xi[j]);
 		hm = (f[iBX]*f[iBX]+f[iBY]*f[iBY] + f[iBZ]*f[iBZ]) * dt2*dt2;
 		vxm = (xi[j+iVx] + f[iEX] * dt2);

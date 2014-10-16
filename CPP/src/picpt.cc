@@ -19,6 +19,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <cstdlib>
 #include <boost/program_options.hpp>
 #include "config.h"
 #include "para.h"
@@ -35,7 +37,9 @@ int main(int argc, char *argv[]) {
 
 	Parameter para;
 
-	std::string conffile;
+	std::vector<std::string> sublist;
+	std::string conffile, vx, vy, vz, ri;
+
 	bpo::variables_map vm;
 	bpo::options_description cOpt("Control options");
 	bpo::options_description fOpt("Field options");
@@ -83,10 +87,14 @@ int main(int argc, char *argv[]) {
 	("Np", bpo::value<size_t>(&para.Np)->
 		default_value(1), "number of particles")
 	("ts", bpo::value<double>(&para.ts)->
-		default_value(-0.05), "number of steps")
+		default_value(-0.05), "time step")
+	("vx", bpo::value<std::string>(&vx), "Vx range")
+	("vy", bpo::value<std::string>(&vy), "Vy range")
+	("vz", bpo::value<std::string>(&vz), "Vz range")
+	("ri", bpo::value<std::string>(&ri), "start position")
 	("steps", bpo::value<size_t>(&para.step), "number of steps")
-	("output-path", bpo::value<std::string>(&para.output_path)->
-		default_value("./"), "Output path for particle trace")
+	("output,o", bpo::value<std::string>(&para.outf)->
+		default_value("./out.dat"), "Output file for particle trace")
 	;
 	allOpt.add(cOpt).add(fOpt).add(tOpt);
 	confOpt.add(fOpt).add(tOpt);
@@ -118,6 +126,37 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
+	if (vm.count("vx")) {
+		para.Split(vx, ',', sublist);
+		para.vx[0] = strtod(sublist[0].c_str(), NULL);
+		para.vx[1] = strtod(sublist[1].c_str(), NULL);
+		para.nvx = strtol(sublist[2].c_str(), NULL, 10);
+	} else
+		para.nvx = 0;
+	if (vm.count("vy")) {
+		para.Split(vy, ',', sublist);
+		para.vy[0] = strtod(sublist[0].c_str(), NULL);
+		para.vy[1] = strtod(sublist[1].c_str(), NULL);
+		para.nvy = strtol(sublist[2].c_str(), NULL, 10);
+	} else
+		para.nvy = 0;
+	if (vm.count("vz")) {
+		para.Split(vz, ',', sublist);
+		para.vz[0] = strtod(sublist[0].c_str(), NULL);
+		para.vz[1] = strtod(sublist[1].c_str(), NULL);
+		para.nvz = strtol(sublist[2].c_str(), NULL, 10);
+	} else
+		para.nvz = 0;
+	if (vm.count("ri")) {
+		para.Split(ri, ',', sublist);
+		para.r[0] = strtod(sublist[0].c_str(), NULL);
+		para.r[1] = strtod(sublist[1].c_str(), NULL);
+		para.r[2] = strtod(sublist[2].c_str(), NULL);
+	} else {
+		para.r[0] = 32; para.r[1] = 0; para.r[2] = -0.32;
+	}
+	
+
 	para.Update();
 
 	if (vm.count("dump")) {
@@ -131,19 +170,29 @@ int main(int argc, char *argv[]) {
 // Load EM fields from file
 	EMField field(para);
 
-	para.Np = 2;
-	double x[12] = {32.,0,-0.32,3.,0,0, 32.,0,-0.32,0,0,2.};
-	Particle pi(para, x);
+	Particle pi;
+
+	if (para.nvxyz) {
+		pi.Set_Up_Uniform(para);
+	} else {
+		const double x[N_DIMS]={para.r[0],para.r[1],para.r[2],0,-3.5,0};
+		pi = Particle(para, x);
+	}
 
 	ParticleTracer pt(field, pi, para);
 	try {
-		pt.Run(1750,1000,para);
+		pt.Run(1750,1250,para);
 	} catch (const std::exception& err) {
 		std::cerr << err.what() << std::endl;
 		return EXIT_FAILURE;
 	}
 
-	pt.Write(para.output_path + "t.txt", para);
+	try {
+		pt.Write(para.outf, para);
+	} catch (const std::exception& err) {
+		std::cerr << err.what() << std::endl;
+		return EXIT_FAILURE;
+	}
 
 	return EXIT_SUCCESS;
 }
