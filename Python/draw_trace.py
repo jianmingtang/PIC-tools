@@ -20,9 +20,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import math
 import numpy
-import pylab
 import argparse
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
@@ -46,11 +44,11 @@ class ParticleTrace:
 			reshape(self.Nts, self.Np * 6)
 		fh.close()
 
-	def data_stream(self, cx, cy):
+	def data_stream(self, cx, cy, skip=1):
 		"""Generator for data stream"""
 		i = self.Nts 
 		while i > 0:
-			i -= 1
+			i -= skip
 			f = self.data[i,:].reshape(self.Np,6)
 			yield f[:,cx], f[:,cy]
 
@@ -117,19 +115,19 @@ class Figure2D:
 		fZ: 2D data set (Fortran indexing)
 		"""
 		title = name.replace(' ','_')
-		self.figs.append((title,pylab.figure(title)))
+		self.figs.append((title,plt.figure(title)))
 		fX,fY = numpy.meshgrid(X,Y)
-		pcm = pylab.pcolormesh(fX, fY, fZ)
-		pylab.axis('tight')
+		pcm = plt.pcolormesh(fX, fY, fZ)
+		plt.axis('tight')
 		self.figs[-1][1].colorbar(pcm)
-		pylab.title(name)
+		plt.title(name)
 
 
-class AnimatedScatterPlot:
+class AnimatedScatterPlot2D:
 	"""Animated scatter plot using matplotlib.animations.FuncAnimation."""
-	def __init__(self, pt, cx, cy):
+	def __init__(self, pt, cx, cy, skip=1):
 		self.pt = pt
-		self.stream = pt.data_stream(cx, cy)
+		self.stream = pt.data_stream(cx, cy, skip)
 		self.fig = plt.figure('Particle Tracer')
 		# plt.axes([10, 70, -3, 1])
 		self.mov = ani.FuncAnimation(self.fig, self.update, interval=1,
@@ -138,9 +136,7 @@ class AnimatedScatterPlot:
 	def setup_plot(self):
 		"""Initial drawing of the scatter plot"""
 		x, y = next(self.stream)
-		self.scat, = plt.plot(x,y,'bo',animated=True)
-		# Note that FuncAnimation expects a sequence of artists,
-		# thus the trailing comma.
+		self.scat, = plt.plot(x, y, 'bo', animated=True)
 		return self.scat,
 
 	def update(self, i):
@@ -148,7 +144,6 @@ class AnimatedScatterPlot:
 		x, y = next(self.stream)
 		# Set x and y data...
 		self.scat.set_data(x, y)
-#		self.scat.set_ydata(y)
 		return self.scat,
 
 	def show(self):
@@ -157,31 +152,31 @@ class AnimatedScatterPlot:
 
 class FFMpegWriter:
 	"""Create a movie using matplotlib.animations.FFMpegWriter"""
-	def __init__(self, pt):
+	def __init__(self, fname, pt, cx, cy, skip=1, metadata={}, fps=15, Nf=150):
+		self.fname = fname
 		self.pt = pt
-		self.stream = pt.data_stream()
-		self.fig = plt.figure('Particle Tracer')
-		self.writer = ani.writers['ffmpeg']
-#		writer = FFMpegWriter(fps=15, metadata=metadata)
+		self.stream = pt.data_stream(cx, cy, skip)
+		self.writer = ani.FFMpegWriter(metadata=metadata, fps=fps)
+		self.setup_plot()
+		self.make_movie(Nf)
 
 	def setup_plot(self):
 		"""Initial drawing of the scatter plot"""
-		x, y = next(self.stream)
-		self.scat, = plt.plot(x,y,'bo',animated=True)
-		# Note that FuncAnimation expects a sequence of artists,
-		# thus the trailing comma.
-		return self.scat,
+		self.fig = plt.figure()
+		x = []; y = []
+		plt.xlim(10, 70)
+		plt.ylim(-3, 1)
+		self.scat, = plt.plot(x, y, 'bo')
 
-	def update(self, i):
+	def make_movie(self, Nf):
 		"""Update the scatter plot"""
-		x, y = next(self.stream)
-		# Set x and y data...
-		self.scat.set_data(x, y)
-		return self.scat,
-
-	def show(self):
-		plt.show()
-
+		with self.writer.saving(self.fig, self.fname, Nf):
+			for i in range(Nf):
+				x, y = next(self.stream)
+				# Set x and y data...
+				self.scat.set_data(x, y)
+				print i
+				self.writer.grab_frame()
 
 
 
@@ -220,11 +215,10 @@ if __name__ == "__main__":
 
 
 	pt = ParticleTrace(args.datafile)
-	myani = AnimatedScatterPlot(pt, 0, 2)
+	myani = AnimatedScatterPlot2D(pt, cx=0, cy=2, skip=5)
 	myani.show()
 
-#	FFMpegWriter = ani.writers['ffmpeg']
 	metadata = dict(title='Particle Tracer', artist='Matplotlib',
 		comment='velocity grid')
-#	mymov = 
-#	with writer.saving(fig, "writer_test.mp4", 100):
+#	mymov = FFMpegWriter('test.mp4', pt, cx=0, cy=2, skip=5,
+#		metadata=metadata,fps=15,Nf=2000)
