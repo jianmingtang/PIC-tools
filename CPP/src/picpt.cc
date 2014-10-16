@@ -128,30 +128,30 @@ int main(int argc, char *argv[]) {
 
 	if (vm.count("vx")) {
 		para.Split(vx, ',', sublist);
-		para.vx[0] = strtod(sublist[0].c_str(), NULL);
-		para.vx[1] = strtod(sublist[1].c_str(), NULL);
-		para.nvx = strtol(sublist[2].c_str(), NULL, 10);
+		para.vx[0] = atof(sublist[0].c_str());
+		para.vx[1] = atof(sublist[1].c_str());
+		para.nvx = atoi(sublist[2].c_str());
 	} else
 		para.nvx = 0;
 	if (vm.count("vy")) {
 		para.Split(vy, ',', sublist);
-		para.vy[0] = strtod(sublist[0].c_str(), NULL);
-		para.vy[1] = strtod(sublist[1].c_str(), NULL);
-		para.nvy = strtol(sublist[2].c_str(), NULL, 10);
+		para.vy[0] = atof(sublist[0].c_str());
+		para.vy[1] = atof(sublist[1].c_str());
+		para.nvy = atoi(sublist[2].c_str());
 	} else
 		para.nvy = 0;
 	if (vm.count("vz")) {
 		para.Split(vz, ',', sublist);
-		para.vz[0] = strtod(sublist[0].c_str(), NULL);
-		para.vz[1] = strtod(sublist[1].c_str(), NULL);
-		para.nvz = strtol(sublist[2].c_str(), NULL, 10);
+		para.vz[0] = atof(sublist[0].c_str());
+		para.vz[1] = atof(sublist[1].c_str());
+		para.nvz = atoi(sublist[2].c_str());
 	} else
 		para.nvz = 0;
 	if (vm.count("ri")) {
 		para.Split(ri, ',', sublist);
-		para.r[0] = strtod(sublist[0].c_str(), NULL);
-		para.r[1] = strtod(sublist[1].c_str(), NULL);
-		para.r[2] = strtod(sublist[2].c_str(), NULL);
+		para.r[0] = atof(sublist[0].c_str());
+		para.r[1] = atof(sublist[1].c_str());
+		para.r[2] = atof(sublist[2].c_str());
 	} else {
 		para.r[0] = 32; para.r[1] = 0; para.r[2] = -0.32;
 	}

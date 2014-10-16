@@ -67,6 +67,7 @@ void ParticleTracer::Write(std::string fname, const Parameter &p) {
 	} else
 		ofs.open(fname.c_str(), std::ios::out);
 
+	ofs << p.Np << " " << pt.size() << "\n";
 	for (size_t i = 0; i < pt.size(); ++i) {
 		for (size_t j = 0; j < p.Np; ++j) {
 			for (size_t k = 0; k < N_COORDS; ++k) {
