@@ -29,24 +29,28 @@ private:
 	void Clear();
 public:
 
-	Array2D();
-	Array2D(size_t, size_t);
-	Array2D(size_t, size_t, T*);
-	Array2D(const Array2D<T>&);
+	inline Array2D();
+	inline Array2D(size_t, size_t);
+	inline Array2D(size_t, size_t, T*);
+	inline Array2D(const Array2D<T>&);
 	inline T* operator[](size_t);
 	inline const T* operator[](size_t) const;
 	inline Array2D<T>& operator=(const Array2D<T>&);
-	inline Array2D<T>& Copy() const;
-	~Array2D();
+	inline Array2D<T> Copy() const;
+	inline ~Array2D();
 
-	size_t Get_ref() const;
+	size_t Get_Ref() const;
 };
 
 /**
  *  Empty constructor.
  */
 template <class T>
-Array2D<T>::Array2D() : data(NULL), p(NULL), ref(NULL) {}
+Array2D<T>::Array2D() : data(NULL), p(NULL), ref(NULL) {
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Create: " << this << std::endl;
+#endif
+}
 
 /**
  *  Constructor without initialization.
@@ -64,6 +68,9 @@ Array2D<T>::Array2D(size_t m, size_t n) : m_(m), n_(n) {
 
 	ref = new size_t;
 	*ref = 1;
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Create: " << this << "(" << data << ")\n";
+#endif
 }
 
 /**
@@ -84,6 +91,9 @@ Array2D<T>::Array2D(size_t m, size_t n, T* a) : m_(m), n_(n) {
 
 	ref = new size_t;
 	*ref = 1;
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Create: " << this << "(" << data << ") with data\n";
+#endif
 }
 
 /**
@@ -104,17 +114,20 @@ Array2D<T>::Array2D(const Array2D<T>& A) : m_(A.m_), n_(A.n_),
 	for (i=0; i<len; ++i)
 		data[i] = A[0][i];
 */
-#ifdef ARRAY2D_DEBUG
-	std::cerr << "Copy: " << A[0] << "->" << data << std::endl;
-#endif
+// copy by reference
 	if (A.ref != NULL) (*(A.ref))++;
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Copy: " << &A << "(" << A[0] << ") -> "
+		<< this << "(" << data << "); "
+		<< "Ref count: " << " " << *ref << std::endl;
+#endif
 }
 
 /**
  *  First index; Set item.
  */
 template <class T>
-inline T* Array2D<T>::operator[](size_t i) {
+T* Array2D<T>::operator[](size_t i) {
 	return p[i];
 }
 
@@ -122,7 +135,7 @@ inline T* Array2D<T>::operator[](size_t i) {
  *  First index; Get item.
  */
 template <class T>
-inline const T* Array2D<T>::operator[](size_t i) const {
+const T* Array2D<T>::operator[](size_t i) const {
 	return p[i];
 }
 
@@ -132,7 +145,7 @@ inline const T* Array2D<T>::operator[](size_t i) const {
  *	Return by & reduces one copy-constructor call.
  */
 template <class T>
-inline Array2D<T>& Array2D<T>::operator=(const Array2D<T>& A) {
+Array2D<T>& Array2D<T>::operator=(const Array2D<T>& A) {
 	size_t i;
 
 	m_ = A.m_; n_ = A.n_; len = A.len;
@@ -147,7 +160,6 @@ inline Array2D<T>& Array2D<T>::operator=(const Array2D<T>& A) {
 	for (i=0; i<len; ++i)
 		data[i] = A[0][i];
 */
-
 // assign by reference
 	if (ref != NULL) {
 		(*ref)--;
@@ -157,9 +169,10 @@ inline Array2D<T>& Array2D<T>::operator=(const Array2D<T>& A) {
 	p = A.p;
 	ref = A.ref;
 	if (A.ref != NULL) (*(A.ref))++;
-
 #ifdef ARRAY2D_DEBUG
-	std::cerr << "Assign: " << A[0] << "->" << data << std::endl;
+	std::cerr << "Assign: " << &A << "(" << A[0] << ") -> "
+		<< this << "(" << data << "); "
+		<< "Ref count: " << " " << *ref << std::endl;
 #endif
 
 	return *this;
@@ -169,9 +182,12 @@ inline Array2D<T>& Array2D<T>::operator=(const Array2D<T>& A) {
  *  Create a copy (by value).
  */
 template <class T>
-inline Array2D<T>& Array2D<T>::Copy() const {
-	size_t i;
+Array2D<T> Array2D<T>::Copy() const {
 	Array2D<T> C(m_,n_,data);
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Duplicate: " << this << "(" << data << "); "
+		"Ref count: " << " " << *ref << std::endl;
+#endif
 	return C;
 }
 
@@ -193,13 +209,18 @@ void Array2D<T>::Clear() {
  */
 template <class T>
 Array2D<T>::~Array2D() {
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Destroy: " << this << "(" << data << "); ";
+#endif
 	if (ref != NULL) {
 		(*ref)--;
+#ifdef ARRAY2D_DEBUG
+	std::cerr << "Ref count: " << " " << *ref << std::endl;
+#endif
 		if (*ref == 0) Clear();
 	}
 #ifdef ARRAY2D_DEBUG
-	std::cerr << "Destroy: " << data << " ";
-	std::cerr << "Ref count: " << " " << *ref << std::endl;
+	else std::cerr << std::endl;
 #endif
 }
 
@@ -207,7 +228,7 @@ Array2D<T>::~Array2D() {
  *  Get the reference count
  */
 template <class T>
-size_t Array2D<T>::Get_ref() const {
+size_t Array2D<T>::Get_Ref() const {
 	return *(this->ref);
 }
 

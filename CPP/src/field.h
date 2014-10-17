@@ -1,4 +1,4 @@
-//#define ARRAY2D_DEBUG
+#define ARRAY2D_DEBUG
 #include "array2D.h"
 #include "para.h"
 
