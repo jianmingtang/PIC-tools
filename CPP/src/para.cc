@@ -6,6 +6,7 @@ void Parameter::Split(const std::string &s,
 		const char delim, std::vector<std::string> &sublist) {
 	std::stringstream ss(s);
 	std::string sub;
+	sublist.clear();
 	while (std::getline(ss, sub, delim)) {
 		sublist.push_back(sub);
 	}

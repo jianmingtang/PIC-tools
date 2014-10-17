@@ -24,6 +24,8 @@ EMField::EMField(const Parameter &p) {
 	for (i = 0; i < N_OF_FIELDS; ++i) {
 		Fa_[i] = Array2D<float>(p.nz, p.nx);
 		Fb_[i] = Array2D<float>(p.nz, p.nx);
+		std::cout << Fa_[i].Get_ref() << std::endl;
+		std::cout << Fb_[i].Get_ref() << std::endl;
 	}
 
 	if (p.source == "LANL") {

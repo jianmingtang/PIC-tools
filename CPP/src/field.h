@@ -1,3 +1,4 @@
+//#define ARRAY2D_DEBUG
 #include "array2D.h"
 #include "para.h"
 
@@ -26,8 +27,6 @@ public:
 	void (EMField::*Update_Ptr)(int, int);
 	void Update(int, int);
 
-	void Update_LANL(int, int);
-	void Update_NASA(int, int);
 // get fields at any point
 	void Set_Time(double);
 	void Get(double *, double *) const;
@@ -62,8 +61,10 @@ private:
 	Array2D<float> Fa_[N_OF_FIELDS];
 	Array2D<float> Fb_[N_OF_FIELDS];
 
-	void Read_From_NASA_File(int, Array2D<float> []);
-	void Read_From_LANL_File(int, Array2D<float> []);
+	void Read_From_NASA_File(int, Array2D<float> *);
+	void Read_From_LANL_File(int, Array2D<float> *);
+	void Update_LANL(int, int);
+	void Update_NASA(int, int);
 
 	void Get_fab(double *, double *, const Array2D<float> *) const;
 

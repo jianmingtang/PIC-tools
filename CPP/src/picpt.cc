@@ -155,6 +155,9 @@ int main(int argc, char *argv[]) {
 	} else {
 		para.r[0] = 32; para.r[1] = 0; para.r[2] = -0.32;
 	}
+	std::cout << para.r[0] << std::endl;
+	std::cout << para.r[1] << std::endl;
+	std::cout << para.r[2] << std::endl;
 	
 
 	para.Update();

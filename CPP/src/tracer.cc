@@ -33,7 +33,7 @@ void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
 	for (int i = 1750; i > 1250; i-=25) {
 		field->Update(i,i-25);
 		while (t >= i-25) {
-			std::cout << t << " \n";
+			std::cout << t << " ";
 			a = Particle(p);
 			pt.push_back(a);
 			field->Set_Time(t);
