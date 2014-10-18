@@ -40,8 +40,10 @@ class ParticleTrace:
 		buf = fh.readline().split(' ')
 		self.Np = int(buf[0])
 		self.Nts = int(buf[1])
-		self.data = numpy.fromfile(fh,'f4',-1,' ').\
-			reshape(self.Nts, self.Np * 6)
+		datatype = numpy.dtype([('pt','f4',(self.Nts,self.Np*6),)])
+		self.data = numpy.fromfile(fh, datatype)[0]['pt']
+#		self.data = numpy.fromfile(fh,'f4',-1,' ').\
+#			reshape(self.Nts, self.Np * 6)
 		fh.close()
 
 	def data_stream(self, cx, cy, skip=1):
@@ -129,8 +131,8 @@ class AnimatedScatterPlot2D:
 		self.pt = pt
 		self.stream = pt.data_stream(cx, cy, skip)
 		self.fig = fig
-		plt.xlim(-10, 10)
-		plt.ylim(-10, 10)
+		plt.xlim(25, 300)
+		plt.ylim(-25, 25)
 		plt.xlabel('x')
 		self.mov = ani.FuncAnimation(self.fig, self.update, interval=1,
 			init_func=self.setup_plot, blit=True)
@@ -211,8 +213,8 @@ if __name__ == "__main__":
 #		else:
 		grid = [1000, 1, 800]
 		emf = FieldNASA(fname, grid)
-		X = emf.data['xe'] / 5
-		Y = emf.data['ze'] / 5
+		X = emf.data['xe']
+		Y = emf.data['ze']
 		print emf.data['mass']
 		print emf.data['q']
 		print emf.data['wpewce']
@@ -227,7 +229,7 @@ if __name__ == "__main__":
 
 	
 	pt = ParticleTrace(args.datafile)
-	myani = AnimatedScatterPlot2D(fig, pt, cx=3, cy=4, skip=2)
+	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, skip=2)
 	myani.show()
 
 	metadata = dict(title='Particle Tracer', artist='Matplotlib',

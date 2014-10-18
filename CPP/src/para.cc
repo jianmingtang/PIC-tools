@@ -17,7 +17,9 @@ void Parameter::Update() {
 	if (nvxyz != 0) Np = nvxyz;
 
 	rsize = nx * nz;
+// 25 is the mass ratio
 	rfac = sqrt(25.);
+// 0.5 is the wpe/wce
 	vfac = 0.5/sqrt(25.);
 }
 

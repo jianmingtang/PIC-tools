@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 		para.r[1] = atof(sublist[1].c_str());
 		para.r[2] = atof(sublist[2].c_str());
 	} else {
-		para.r[0] = 32; para.r[1] = 0; para.r[2] = -0.32;
+		para.r[0] = 160; para.r[1] = 0; para.r[2] = -1.6;
 	}
 	std::cout << para.r[0] << std::endl;
 	std::cout << para.r[1] << std::endl;

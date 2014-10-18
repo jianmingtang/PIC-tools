@@ -53,6 +53,8 @@ void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
 } 
 
 void ParticleTracer::Write(std::string fname, const Parameter &p) {
+	unsigned int ibuf;
+	float fbuf;
 	std::fstream ofs(fname.c_str());
 	if (ofs) {
 		ofs.close();
@@ -62,21 +64,33 @@ void ParticleTracer::Write(std::string fname, const Parameter &p) {
 		if (ans != "y" && ans != "Y")
 			throw std::invalid_argument("Data not saved!!!");
 		else
-			ofs.open(fname.c_str(), std::ios::out|std::ios::trunc);
+			ofs.open(fname.c_str(), std::ios::out|std::ios::trunc|std::ios::binary);
 
 	} else
-		ofs.open(fname.c_str(), std::ios::out);
+		ofs.open(fname.c_str(), std::ios::out|std::ios::binary);
 
 	ofs << p.Np << " " << pt.size() << "\n";
+/*
+	ibuf = p.Np;
+	ofs.write((char*)&ibuf, sizeof(ibuf));
+	ibuf = pt.size();
+	ofs.write((char*)&ibuf, sizeof(ibuf));
+*/
 	for (size_t i = 0; i < pt.size(); ++i) {
 		for (size_t j = 0; j < p.Np; ++j) {
 			for (size_t k = 0; k < N_COORDS; ++k) {
-				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
+// switch to de scale
+//				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
+				fbuf = pt[i][j*N_DIMS+k];
+				ofs.write((char*)&fbuf, sizeof(fbuf));
 			}
-			for (size_t k = N_COORDS; k < N_DIMS; ++k)
-				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
+			for (size_t k = N_COORDS; k < N_DIMS; ++k) {
+//				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
+				fbuf = pt[i][j*N_DIMS+k];
+				ofs.write((char*)&fbuf, sizeof(fbuf));
+			}
 		}
-		ofs << "\n";
+//		ofs << "\n";
 	}
 	ofs.close();
 	std::cout << "Data saved to " << fname << ".\n";
