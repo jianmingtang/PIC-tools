@@ -12,18 +12,60 @@ void Parameter::Split(const std::string &s,
 	}
 }
 
+void Parameter::Process_Range(Range &r, const std::string &s) {
+	std::vector<std::string> sublist;
+
+	Split(s, ',', sublist);
+	if (sublist.size() != 3) throw
+		std::invalid_argument("Invalid range parameters.");
+	r.min = atof(sublist[0].c_str());
+	r.max = atof(sublist[1].c_str());
+	r.N = atoi(sublist[2].c_str());
+}
+
+void Parameter::Process_Tuple(size_t N, double *a, const std::string &s) {
+	std::vector<std::string> sublist;
+
+	Split(s, ',', sublist);
+	if (sublist.size() != 3) throw
+		std::invalid_argument("Invalid range parameters.");
+	for (size_t i = 0; i < N; ++i)
+		a[i] = atof(sublist[i].c_str());
+}
+
 void Parameter::Update() {
-	nvxyz = nvx * nvy * nvz;
+	nvxyz = vxR.N * vyR.N * vzR.N;
 	if (nvxyz != 0) Np = nvxyz;
 
 	rsize = nx * nz;
+// scaling factors (obsolete)
 // 25 is the mass ratio
-	rfac = sqrt(25.);
+//	rfac = sqrt(25.);
 // 0.5 is the wpe/wce
-	vfac = 0.5/sqrt(25.);
+//	vfac = 0.5/sqrt(25.);
 }
 
-bool neq(double a, double b) {
+void Parameter::Show_Info() {
+	std::cout << "System dimensions: " << std::endl;
+	std::cout << "\tLx: " << Lx << std::endl;
+	std::cout << "\tLy: " << Ly << std::endl;
+	std::cout << "\tLz: " << Lz << std::endl;
+	std::cout << "Grid points: " << std::endl;
+	std::cout << "\tnx: " << nx << std::endl;
+	std::cout << "\tny: " << ny << std::endl;
+	std::cout << "\tnz: " << nz << std::endl;
+	std::cout << "Number of particles: " << Np << std::endl;
+	std::cout << "Time: " << std::endl;
+	std::cout << "\tt: " << tb << " " << te << " " << ts << std::endl;
+	std::cout << "\tft: " << ftb << " " << fte << " " << fts << std::endl;
+	std::cout << "Initial conditions: " << std::endl;
+	std::cout << "\tr: "<< r[0]<<" "<<r[1]<<" "<<r[2]<<std::endl;
+	std::cout << "\tvx: "<<vxR.min<<" "<<vxR.max<<" "<<vxR.N<< std::endl;
+	std::cout << "\tvy: "<<vyR.min<<" "<<vyR.max<<" "<<vyR.N<< std::endl;
+	std::cout << "\tvz: "<<vzR.min<<" "<<vzR.max<<" "<<vzR.N<< std::endl;
+}
+
+bool Parameter::Neq(double a, double b) const {
 	if (fabs(a-b) > 1.e-3) return true;
 	else return false;
 }
@@ -50,7 +92,7 @@ bool Parameter::Check_LANL_Info_File() const {
 	}
 	ifs.close();
 	if ((n[0] != nx) || (n[1] != ny) || (n[2] != nz)
-		|| neq(L[0],Lx) || neq(L[1],Ly) || neq(L[2],Lz)) {
+		|| Neq(L[0],Lx) || Neq(L[1],Ly) || Neq(L[2],Lz)) {
 		std::cerr << "Inconsistent LANL PIC parameters!\n";
 		std::cerr << "Parameters from LANL info file:\n";
 		std::cerr << "\tnx = " << n[0] << "\n";

@@ -131,8 +131,8 @@ class AnimatedScatterPlot2D:
 		self.pt = pt
 		self.stream = pt.data_stream(cx, cy, skip)
 		self.fig = fig
-		plt.xlim(25, 300)
-		plt.ylim(-25, 25)
+		plt.xlim(50, 270)
+		plt.ylim(-35, 35)
 		plt.xlabel('x')
 		self.mov = ani.FuncAnimation(self.fig, self.update, interval=1,
 			init_func=self.setup_plot, blit=True)

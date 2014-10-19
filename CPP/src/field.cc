@@ -7,8 +7,6 @@
  */
 EMField::EMField(const Parameter &p) {
 
-	unsigned int i;
-
 	qom = -1.;
 	nxC = 1;
 	nyC = p.ny / 2;
@@ -21,19 +19,25 @@ EMField::EMField(const Parameter &p) {
 	dataf[iBX] = p.Bx; dataf[iBY] = p.By; dataf[iBZ] = p.Bz;
 	dataf[iEX] = p.Ex; dataf[iEY] = p.Ey; dataf[iEZ] = p.Ez;
 
-	for (i = 0; i < N_OF_FIELDS; ++i) {
+	for (size_t i = 0; i < N_OF_FIELDS; ++i) {
 		Fa_[i] = Array2D<float>(p.nz, p.nx);
 		Fb_[i] = Array2D<float>(p.nz, p.nx);
-		std::cout << Fa_[i].Get_Ref() << std::endl;
-		std::cout << Fb_[i].Get_Ref() << std::endl;
 	}
 
-	if (p.source == "LANL") {
+	if (p.source == "LANL")
 		Update_Ptr = & EMField::Update_LANL;
-	}
-	if (p.source == "NASA") {
+	if (p.source == "NASA")
 		Update_Ptr = & EMField::Update_NASA;
-	}
+
+	Get_F_Ptr = & EMField::Get_E;
+	if (p.plot == "Bx") Get_F_Ptr = & EMField::Get_Bx;
+	if (p.plot == "By") Get_F_Ptr = & EMField::Get_By;
+	if (p.plot == "Bz") Get_F_Ptr = & EMField::Get_Bz;
+	if (p.plot == "B")  Get_F_Ptr = & EMField::Get_B;
+	if (p.plot == "Ex") Get_F_Ptr = & EMField::Get_Ex;
+	if (p.plot == "Ey") Get_F_Ptr = & EMField::Get_Ey;
+	if (p.plot == "Ez") Get_F_Ptr = & EMField::Get_Ez;
+//	if (p.plot == "E")  Get_F_Ptr = & EMField::Get_E;
 }
 
 /**
@@ -65,12 +69,11 @@ void EMField::Update_NASA(int ta, int tb) {
  *  Read one time slice from LANL files
  */
 void EMField::Read_From_LANL_File(int t, Array2D<float> *F) {
-	unsigned int i;
 // Two additonal parameters (4 bytes each) at the end of each time slice
-	unsigned int skip = (rsize + 2) * DATA_SIZE * (t - 1);
+	size_t skip = (rsize + 2) * DATA_SIZE * (t - 1);
 	std::string fname, err;
 
-	for (i = 0; i < N_OF_FIELDS; ++i) {
+	for (size_t i = 0; i < N_OF_FIELDS; ++i) {
 		std::string fname = field_path + "/" + dataf[i]; 
 		std::ifstream ifs(fname.c_str(), std::ios::binary);
 		if (!ifs) {
@@ -88,8 +91,8 @@ void EMField::Read_From_LANL_File(int t, Array2D<float> *F) {
  *  Read one time slice from a NASA file
  */
 void EMField::Read_From_NASA_File(int t, Array2D<float> *F) {
-	unsigned int i;
-	static unsigned int skip = (rsize * 4 * 3 + 8) * DATA_SIZE;
+	size_t i;
+	static size_t skip = (rsize * 4 * 3 + 8) * DATA_SIZE;
 	char buf[9];
 	std::string fname, err;
 
@@ -144,6 +147,7 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 
 	unsigned int ix, iz, j;
 	double fx, fz;
+// weighting factors for bilinear interpolation
 	double wmm, wmp, wpm, wpp;
 
 	fx = scaleX(r[0]);
@@ -177,9 +181,7 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 		std::cout << F[j][iz+1][ix+1] << ", ";
 	}
 	std::cout << std::endl;
-*/
 // approx 3
-/*
 	for (j = 0; j < N_OF_FIELDS; ++j) {
 		f[j] = (wmm * F[j][iz][ix]   +
 			wpm * F[j][iz][ix+1] +
@@ -188,59 +190,62 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 	}
 */
 // approx 4
-	f[iBX] = (wmm * (F[iBX][iz-1][ix] + F[iBX][iz][ix]    ) +
-		wpm * (F[iBX][iz-1][ix+1] + F[iBX][iz][ix+1]  ) +
-		wmp * (F[iBX][iz][ix]     + F[iBX][iz+1][ix]  ) +
-		wpp * (F[iBX][iz][ix+1]   + F[iBX][iz+1][ix+1])) * 0.5;
-	f[iBY] = (wmm * (F[iBY][iz-1][ix-1] + F[iBY][iz][ix-1]   +
-			F[iBY][iz-1][ix]    + F[iBY][iz][ix]     ) +
-		wpm * (F[iBY][iz-1][ix]     + F[iBY][iz][ix]     +
-			F[iBY][iz-1][ix+1]  + F[iBY][iz][ix+1]   ) +
-		wmp * (F[iBY][iz][ix-1]     + F[iBY][iz+1][ix-1] +
-			F[iBY][iz][ix]      + F[iBY][iz+1][ix]   ) +
-		wpp * (F[iBY][iz][ix]       + F[iBY][iz+1][ix]   +
-			F[iBY][iz][ix+1]    + F[iBY][iz+1][ix+1] )) * 0.25;
-	f[iBZ] = (wmm * (F[iBZ][iz][ix-1] + F[iBZ][iz][ix]    ) +
-		wpm * (F[iBZ][iz][ix]     + F[iBZ][iz][ix+1]  ) +
-		wmp * (F[iBZ][iz+1][ix-1] + F[iBZ][iz+1][ix]  ) +
-		wpp * (F[iBZ][iz+1][ix]   + F[iBZ][iz+1][ix+1])) * 0.5;
-	f[iEX] = (wmm * (F[iEX][iz][ix-1] + F[iEX][iz][ix]    ) +
-		wpm * (F[iEX][iz][ix]     + F[iEX][iz][ix+1]  ) +
-		wmp * (F[iEX][iz+1][ix-1] + F[iEX][iz+1][ix]  ) +
-		wpp * (F[iEX][iz+1][ix]   + F[iEX][iz+1][ix+1])) * 0.5;
-	f[iEY] = (wmm * F[iEY][iz][ix] +
-		wpm * F[iEY][iz][ix+1] +
-		wmp * F[iEY][iz+1][ix] +
-		wpp * F[iEY][iz+1][ix+1]);
-	f[iEZ] = (wmm * (F[iEZ][iz-1][ix] + F[iEZ][iz][ix]     ) +
-		wpm * (F[iEZ][iz-1][ix+1] + F[iEZ][iz][ix+1]   ) +
-		wmp * (F[iEZ][iz][ix]     + F[iEZ][iz+1][ix]   ) +
-		wpp * (F[iEZ][iz][ix+1]   + F[iEZ][iz+1][ix+1])) * 0.5;
+// bilinear interpolation
+	f[iBX] = (wmm * (F[iBX][iz-1][ix]   + F[iBX][iz][ix]    ) +
+		  wpm * (F[iBX][iz-1][ix+1] + F[iBX][iz][ix+1]  ) +
+		  wmp * (F[iBX][iz][ix]     + F[iBX][iz+1][ix]  ) +
+		  wpp * (F[iBX][iz][ix+1]   + F[iBX][iz+1][ix+1]) ) * 0.5;
+	f[iBY] = (wmm * (F[iBY][iz-1][ix-1] + F[iBY][iz][ix-1]  +
+			 F[iBY][iz-1][ix]   + F[iBY][iz][ix]     ) +
+		  wpm * (F[iBY][iz-1][ix]   + F[iBY][iz][ix]    +
+			 F[iBY][iz-1][ix+1] + F[iBY][iz][ix+1]   ) +
+		  wmp * (F[iBY][iz][ix-1]   + F[iBY][iz+1][ix-1]+
+			 F[iBY][iz][ix]     + F[iBY][iz+1][ix]   ) +
+		  wpp * (F[iBY][iz][ix]     + F[iBY][iz+1][ix]  +
+			 F[iBY][iz][ix+1]   + F[iBY][iz+1][ix+1] ) ) * 0.25;
+	f[iBZ] = (wmm * (F[iBZ][iz][ix-1]   + F[iBZ][iz][ix]    ) +
+		  wpm * (F[iBZ][iz][ix]     + F[iBZ][iz][ix+1]  ) +
+		  wmp * (F[iBZ][iz+1][ix-1] + F[iBZ][iz+1][ix]  ) +
+		  wpp * (F[iBZ][iz+1][ix]   + F[iBZ][iz+1][ix+1]) ) * 0.5;
+	f[iEX] = (wmm * (F[iEX][iz][ix-1]   + F[iEX][iz][ix]    ) +
+		  wpm * (F[iEX][iz][ix]     + F[iEX][iz][ix+1]  ) +
+		  wmp * (F[iEX][iz+1][ix-1] + F[iEX][iz+1][ix]  ) +
+		  wpp * (F[iEX][iz+1][ix]   + F[iEX][iz+1][ix+1]) ) * 0.5;
+	f[iEY] = (wmm * F[iEY][iz][ix]   +
+		  wpm * F[iEY][iz][ix+1] +
+		  wmp * F[iEY][iz+1][ix] +
+		  wpp * F[iEY][iz+1][ix+1]);
+	f[iEZ] = (wmm * (F[iEZ][iz-1][ix]   + F[iEZ][iz][ix]    ) +
+		  wpm * (F[iEZ][iz-1][ix+1] + F[iEZ][iz][ix+1]  ) +
+		  wmp * (F[iEZ][iz][ix]     + F[iEZ][iz+1][ix]  ) +
+		  wpp * (F[iEZ][iz][ix+1]   + F[iEZ][iz+1][ix+1]) ) * 0.5;
 }
 
 double EMField::Get_Bx(unsigned int i) const {
-	return F_[0][0][i];
+	return Fa_[iBX][0][i];
 }
 double EMField::Get_By(unsigned int i) const {
-	return F_[1][0][i];
+	return Fa_[iBY][0][i];
 }
 double EMField::Get_Bz(unsigned int i) const {
-	return F_[2][0][i];
+	return Fa_[iBZ][0][i];
 }
 double EMField::Get_B(unsigned int i) const {
-	return sqrt((double)F_[0][0][i] * F_[0][0][i]
-		+ F_[1][0][i] * F_[1][0][i] + F_[2][0][i] * F_[2][0][i]);
+	return sqrt((double)Fa_[iBX][0][i] * Fa_[iBX][0][i]
+		+ Fa_[iBY][0][i] * Fa_[iBY][0][i]
+		+ Fa_[iBZ][0][i] * Fa_[iBZ][0][i]);
 }
 double EMField::Get_Ex(unsigned int i) const {
-	return F_[3][0][i];
+	return Fa_[iEX][0][i];
 }
 double EMField::Get_Ey(unsigned int i) const {
-	return F_[4][0][i];
+	return Fa_[iEY][0][i];
 }
 double EMField::Get_Ez(unsigned int i) const {
-	return F_[5][0][i];
+	return Fa_[iEZ][0][i];
 }
 double EMField::Get_E(unsigned int i) const {
-	return sqrt((double)F_[3][0][i] * F_[3][0][i]
-		+ F_[4][0][i] * F_[4][0][i] + F_[5][0][i] * F_[5][0][i]);
+	return sqrt((double)Fa_[iEX][0][i] * Fa_[iEX][0][i]
+		+ Fa_[iEY][0][i] * Fa_[iEY][0][i]
+		+ Fa_[iEZ][0][i] * Fa_[iEZ][0][i]);
 }

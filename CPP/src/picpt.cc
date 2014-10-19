@@ -27,7 +27,6 @@
 #include "field.h"
 #include "particle.h"
 #include "tracer.h"
-#include "pyplot.h"
 
 #define PROGRAM_NAME "picpt"
 
@@ -38,7 +37,8 @@ int main(int argc, char *argv[]) {
 	Parameter para;
 
 	std::vector<std::string> sublist;
-	std::string conffile, vx, vy, vz, ri;
+	std::string conffile;
+	std::string vxR, vyR, vzR, ri;
 
 	bpo::variables_map vm;
 	bpo::options_description cOpt("Control options");
@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 	("config,c", bpo::value<std::string>(&conffile),
 		"configuration file (required)")
 	("dump", "print out simulation parameters")
+#ifdef HAVE_PYTHON
 	("plot-B", "plot the magnetic field")
 	("plot-Bx", "plot the x component of the magnetic field")
 	("plot-By", "plot the y component of the magnetic field")
@@ -60,14 +61,13 @@ int main(int argc, char *argv[]) {
 	("plot-Ex", "plot the x component of the electric field")
 	("plot-Ey", "plot the y component of the electric field")
 	("plot-Ez", "plot the z component of the electric field")
+#endif
 	;
 	fOpt.add_options()
 	("source", bpo::value<std::string>(&para.source),
 		"data source")
 	("field-path", bpo::value<std::string>(&para.field_path),
 		"Search path for field data")
-	("pdist-path", bpo::value<std::string>(&para.pdist_path),
-		"Search path for particle distribution")
 	("time", bpo::value<size_t>(&para.time)->
 		default_value(1), "Time slice")
 	("Bx", bpo::value<std::string>(&para.Bx), "Bx data file")
@@ -82,23 +82,33 @@ int main(int argc, char *argv[]) {
 	("nx", bpo::value<size_t>(&para.nx), "nx")
 	("ny", bpo::value<size_t>(&para.ny), "ny")
 	("nz", bpo::value<size_t>(&para.nz), "nz")
+	("ftb", bpo::value<size_t>(&para.ftb)->
+		default_value(0), "field time begin")
+	("fte", bpo::value<size_t>(&para.fte)->
+		default_value(0), "field time end")
+	("fts", bpo::value<size_t>(&para.fts)->
+		default_value(0), "field time step")
 	;
 	tOpt.add_options()
+	("pi-file", bpo::value<std::string>(&para.pi_file),
+		"Initial particle set")
 	("Np", bpo::value<size_t>(&para.Np)->
 		default_value(1), "number of particles")
+	("tb", bpo::value<double>(&para.tb), "time begin")
+	("te", bpo::value<double>(&para.te), "time end")
 	("ts", bpo::value<double>(&para.ts)->
-		default_value(-0.05), "time step")
-	("vx", bpo::value<std::string>(&vx), "Vx range")
-	("vy", bpo::value<std::string>(&vy), "Vy range")
-	("vz", bpo::value<std::string>(&vz), "Vz range")
+		default_value(-0.05,"-0.05"), "time step")
+	("vx", bpo::value<std::string>(&vxR), "Vx range")
+	("vy", bpo::value<std::string>(&vyR), "Vy range")
+	("vz", bpo::value<std::string>(&vzR), "Vz range")
 	("ri", bpo::value<std::string>(&ri), "start position")
-	("steps", bpo::value<size_t>(&para.step), "number of steps")
 	("output,o", bpo::value<std::string>(&para.outf)->
 		default_value("./out.dat"), "Output file for particle trace")
 	;
 	allOpt.add(cOpt).add(fOpt).add(tOpt);
 	confOpt.add(fOpt).add(tOpt);
 
+// Verify input parameters
 	try {
 		bpo::store(bpo::parse_command_line(argc, argv, allOpt), vm);
 		bpo::notify(vm);
@@ -126,73 +136,74 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	if (vm.count("vx")) {
-		para.Split(vx, ',', sublist);
-		para.vx[0] = atof(sublist[0].c_str());
-		para.vx[1] = atof(sublist[1].c_str());
-		para.nvx = atoi(sublist[2].c_str());
-	} else
-		para.nvx = 0;
-	if (vm.count("vy")) {
-		para.Split(vy, ',', sublist);
-		para.vy[0] = atof(sublist[0].c_str());
-		para.vy[1] = atof(sublist[1].c_str());
-		para.nvy = atoi(sublist[2].c_str());
-	} else
-		para.nvy = 0;
-	if (vm.count("vz")) {
-		para.Split(vz, ',', sublist);
-		para.vz[0] = atof(sublist[0].c_str());
-		para.vz[1] = atof(sublist[1].c_str());
-		para.nvz = atoi(sublist[2].c_str());
-	} else
-		para.nvz = 0;
-	if (vm.count("ri")) {
-		para.Split(ri, ',', sublist);
-		para.r[0] = atof(sublist[0].c_str());
-		para.r[1] = atof(sublist[1].c_str());
-		para.r[2] = atof(sublist[2].c_str());
-	} else {
-		para.r[0] = 160; para.r[1] = 0; para.r[2] = -1.6;
-	}
-	std::cout << para.r[0] << std::endl;
-	std::cout << para.r[1] << std::endl;
-	std::cout << para.r[2] << std::endl;
-	
+	if ((para.source == "LANL") && (!para.Check_LANL_Info_File()))
+		return EXIT_FAILURE;
 
-	para.Update();
+// Process input parameters
+	if (vm.count("plot-Bx")) para.plot = "Bx";
+	if (vm.count("plot-By")) para.plot = "By";
+	if (vm.count("plot-Bz")) para.plot = "Bz";
+	if (vm.count("plot-B")) para.plot = "B";
+	if (vm.count("plot-Ex")) para.plot = "Ex";
+	if (vm.count("plot-Ey")) para.plot = "Ey";
+	if (vm.count("plot-Ez")) para.plot = "Ez";
+	if (vm.count("plot-E")) para.plot = "E";
+	try {
+		if (vm.count("vx")) {
+			para.Process_Range(para.vxR, vxR);
+		} else {
+			para.Process_Range(para.vxR, "0,0,0");
+		}
+		if (vm.count("vy")) {
+			para.Process_Range(para.vyR, vyR);
+		} else {
+			para.Process_Range(para.vyR, "0,0,0");
+		}
+		if (vm.count("vz")) {
+			para.Process_Range(para.vzR, vzR);
+		} else {
+			para.Process_Range(para.vzR, "0,0,0");
+		}
+		if (vm.count("ri")) {
+			para.Process_Tuple(3, para.r, ri);
+		} else {
+			para.Process_Tuple(3, para.r, "0,0,0");
+		}
+
+		para.Update();
+	}
+	catch (const std::exception& err) {
+		std::cerr << err.what() << std::endl;
+		return EXIT_FAILURE;
+	}
+
 
 	if (vm.count("dump")) {
 		para.Dump_Conf_Para(vm);
 		return EXIT_SUCCESS;
 	}
 
-	if ((para.source == "LANL") && (!para.Check_LANL_Info_File()))
-		return EXIT_FAILURE;
+	para.Show_Info();
 
-// Load EM fields from file
+// EM fields
 	EMField field(para);
 
+// initial particle set
 	Particle pi;
 
 	if (para.nvxyz) {
 		pi.Set_Up_Uniform(para);
 	} else {
-		const double x[N_DIMS]={para.r[0],para.r[1],para.r[2],0,-3.5,0};
+		const double x[N_DIMS]={para.r[0],para.r[1],para.r[2],0,0,0};
 		pi = Particle(para, x);
 	}
 
-	ParticleTracer pt(field, pi, para);
+	ParticleTracer tracer(field, pi, para);
 	try {
-		pt.Run(1750,1250,para);
-	} catch (const std::exception& err) {
-		std::cerr << err.what() << std::endl;
-		return EXIT_FAILURE;
+		tracer.Run(para);
+		tracer.Write(para);
 	}
-
-	try {
-		pt.Write(para.outf, para);
-	} catch (const std::exception& err) {
+	catch (const std::exception& err) {
 		std::cerr << err.what() << std::endl;
 		return EXIT_FAILURE;
 	}

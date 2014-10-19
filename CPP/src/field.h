@@ -30,19 +30,10 @@ public:
 	void Set_Time(double);
 	void Get(double *, double *) const;
 
-// get fields at the sites
-	double Get_Bx(unsigned int) const;
-	double Get_By(unsigned int) const;
-	double Get_Bz(unsigned int) const;
-	double Get_B(unsigned int) const;
-	double Get_Ex(unsigned int) const;
-	double Get_Ey(unsigned int) const;
-	double Get_Ez(unsigned int) const;
-	double Get_E(unsigned int) const;
-
-	double (EMField::*Get_F)(unsigned int) const;
-        double Get_FF(unsigned int i) const {
-		return (this->*Get_F)(i);
+// get fields at sites
+	double (EMField::*Get_F_Ptr)(unsigned int) const;
+        double Get_F(unsigned int i) const {
+		return (this->*Get_F_Ptr)(i);
 	}
 
 private:
@@ -54,9 +45,8 @@ private:
 	double LxR, LyR, LzR;
 	unsigned int nxC, nyC, nzC;
 	unsigned int rsize;
-	std::string field_path, dataf[6];
+	std::string field_path, dataf[N_OF_FIELDS];
 
-	Array2D<float> F_[N_OF_FIELDS];
 	Array2D<float> Fa_[N_OF_FIELDS];
 	Array2D<float> Fb_[N_OF_FIELDS];
 
@@ -65,12 +55,24 @@ private:
 	void Update_LANL(int, int);
 	void Update_NASA(int, int);
 
+// get fields at sites
+	double Get_Bx(unsigned int) const;
+	double Get_By(unsigned int) const;
+	double Get_Bz(unsigned int) const;
+	double Get_B(unsigned int) const;
+	double Get_Ex(unsigned int) const;
+	double Get_Ey(unsigned int) const;
+	double Get_Ez(unsigned int) const;
+	double Get_E(unsigned int) const;
+
 	void Get_fab(double *, double *, const Array2D<float> *) const;
 
 	inline unsigned int iX(double) const;
 	inline unsigned int iZ(double) const;
 	inline double scaleX(double) const;
 	inline double scaleZ(double) const;
+
+
 //friend void pyplot (const EMField &, int, int, int);
 };
 

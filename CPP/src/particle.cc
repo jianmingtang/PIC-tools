@@ -20,18 +20,27 @@ Particle::Particle(const Parameter &p, const double *x) {
 	}
 }
 
+/**
+ *  Set up a set of particles according to the vx, vy, vz ranges.
+ */
 void Particle::Set_Up_Uniform(const Parameter &p) {
 	size_t i, j, k;
 	double vx, vy, vz;
+	double vxR = p.vxR.max - p.vxR.min;
+	double vyR = p.vyR.max - p.vyR.min;
+	double vzR = p.vzR.max - p.vzR.min;
+	size_t vxS = p.vxR.N - 1;
+	size_t vyS = p.vyR.N - 1;
+	size_t vzS = p.vzR.N - 1;
 
 	f = std::vector<double>(p.Np * N_DIMS);
 
-	for (i = 0; i < p.nvx; ++i) {
-		vx = p.vx[0]+(p.vx[1]-p.vx[0])*i/(p.nvx-1);
-		for (j = 0; j < p.nvy; ++j) {
-			vy = p.vy[0]+(p.vy[1]-p.vy[0])*j/(p.nvy-1);
-			for (k = 0; k < p.nvz; ++k) {
-				vz = p.vz[0]+(p.vz[1]-p.vz[0])*k/(p.nvz-1);
+	for (i = 0; i < p.vxR.N; ++i) {
+		vx = p.vxR.min + vxR * i / vxS;
+		for (j = 0; j < p.vyR.N; ++j) {
+			vy = p.vyR.min + vyR * j / vyS;
+			for (k = 0; k < p.vzR.N; ++k) {
+				vz = p.vzR.min + vzR * k / vzS;
 				data.push_back(p.r[0]);
 				data.push_back(p.r[1]);
 				data.push_back(p.r[2]);
@@ -49,6 +58,4 @@ void Particle::Set_Up_Uniform(const Parameter &p) {
 			}
 		}
 	}
-
-	std::cout << p.Np << " " << data.size() << std::endl;
 }

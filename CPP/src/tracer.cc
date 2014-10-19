@@ -1,6 +1,10 @@
 #include <iostream>
 #include <boost/numeric/odeint/integrate/integrate.hpp>
 #include "tracer.h"
+#include "config.h"
+#ifdef HAVE_PYTHON
+	#include "pyplot.h"
+#endif
 
 
 #define iRx 0
@@ -24,50 +28,74 @@ ParticleTracer::ParticleTracer(EMField &f, const Particle &pi,
 void Check_Bounds(double *x) {
 }
 
-void ParticleTracer::Run(double ti, double tf, const Parameter &p) {
+void ParticleTracer::Run(const Parameter &p) {
+#ifdef HAVE_PYTHON
+//	PyPlot bgplot(p);
+#endif
 	Particle a;
-	double t = ti, dt = p.ts;
+	double t = p.tb, dt = p.ts;
 	double *x;
-	int j = 0;
+	size_t j = 0;
 	bool stop = false;
-	for (int i = 1750; i > 1250; i-=25) {
-		field->Update(i,i-25);
-		while (t >= i-25) {
+	int dir;
+
+	int ib, ie, is;
+
+	if (p.ts > 0) {
+		dir = 1;
+		ib = floor((p.tb - p.ftb) / p.fts) * p.fts + p.ftb;
+	} else {
+		dir = -1;
+		ib = ceil((p.tb - p.ftb) / p.fts) * p.fts + p.ftb;
+	}
+	is = p.fts * dir;
+
+	for (int i = ib; (p.ftb<=i)&&(i<=p.fte) ; i += is) {
+		field->Update(i,i + is);
+#ifdef HAVE_PYTHON
+//		bgplot.Update_Data(*field);
+//		bgplot.Plot();
+#endif
+	std::cout << t << " " << i << " " << i+is << std::endl;
+		while ((t-i) * (t-i-is) <= 0) {
 			std::cout << t << " ";
 			a = Particle(p);
 			pt.push_back(a);
 			field->Set_Time(t);
 			Move_One_Time_Step(dt, &(pt[j][0]),
 				&(pt[j+1][0]), &pt[j].f[0]);
-			x = &(pt[j++][0]);
+			x = &(pt[j][0]);
 			if (x[0] < 0 || x[0] > 320 || abs(x[2]) > 64) {
 				stop = true;
 				break;
 			}
-//			Check_Bounds(&pt[j++].data[0]);
+//			Check_Bounds(&pt[j].data[0]);
+			j++;
 			t += dt;
 		}
 		if (stop) break;
+		if ((t-p.tb)*(t-p.te)>0) break;
 	}
 	std::cout << pt.size() << std::endl;
 } 
 
-void ParticleTracer::Write(std::string fname, const Parameter &p) {
+void ParticleTracer::Write(const Parameter &p) {
 	unsigned int ibuf;
 	float fbuf;
-	std::fstream ofs(fname.c_str());
+	std::fstream ofs(p.outf.c_str());
 	if (ofs) {
 		ofs.close();
 		std::string ans;
-		std::cout << "File " << fname << " exist. Overwrite (y/n)? ";
+		std::cout << "File " << p.outf << " exist. Overwrite (y/n)? ";
 		std::cin >> ans;
 		if (ans != "y" && ans != "Y")
 			throw std::invalid_argument("Data not saved!!!");
 		else
-			ofs.open(fname.c_str(), std::ios::out|std::ios::trunc|std::ios::binary);
+			ofs.open(p.outf.c_str(), std::ios::out | 
+				std::ios::trunc|std::ios::binary);
 
 	} else
-		ofs.open(fname.c_str(), std::ios::out|std::ios::binary);
+		ofs.open(p.outf.c_str(), std::ios::out|std::ios::binary);
 
 	ofs << p.Np << " " << pt.size() << "\n";
 /*
@@ -93,7 +121,7 @@ void ParticleTracer::Write(std::string fname, const Parameter &p) {
 //		ofs << "\n";
 	}
 	ofs.close();
-	std::cout << "Data saved to " << fname << ".\n";
+	std::cout << "Data saved to " << p.outf << ".\n";
 }
 
 // Boris Procedure
