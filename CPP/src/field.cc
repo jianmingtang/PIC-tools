@@ -146,7 +146,7 @@ inline unsigned int EMField::iZ(double z) const {
 
 void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 
-	unsigned int ix, iz, j;
+	int ix, iz;
 	double fx, fz;
 // weighting factors for bilinear interpolation
 	double wmm, wmp, wpm, wpp;
@@ -155,18 +155,24 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 	fz = scaleZ(r[2]);
 	ix = floor(fx);
 	iz = floor(fz);
-	assert (ix >= 1 && ix < 999);
-	assert (iz >= 1 && iz < 799);
 	fx -= ix;
 	fz -= iz;	
+//	assert (ix >= 1 && ix < 999);
+//	assert (iz >= 1 && iz < 799);
 	wmm = (1.-fx) * (1.-fz);
 	wpm = fx * (1.-fz);
 	wmp = (1.-fx) * fz;
 	wpp = fx * fz;
-	assert(wmm>0);
-	assert(wpm>0);
-	assert(wmp>0);
-	assert(wpp>0);
+	if (wmm < 0) std::cout << fx <<" " << fz << std::endl;
+	if (wpm < 0) std::cout << fx <<" " << fz << std::endl;
+	assert(wmm>=0);
+	assert(wpm>=0);
+	assert(wmp>=0);
+	assert(wpp>=0);
+	if (ix < 1) ix = 1;
+	if (ix > 998) ix = 998;
+	if (iz < 1) iz = 1;
+	if (iz > 798) iz = 798;
 /*
 // approx 1
 	for (j = 0; j < N_OF_FIELDS; ++j) {

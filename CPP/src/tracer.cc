@@ -60,6 +60,7 @@ void ParticleTracer::Run(const Parameter &p) {
 			field->Set_Time(t);
 			Move_One_Time_Step(dt, &(pt[j][0]),
 				&(pt[j+1][0]), &pt[j].f[0]);
+/*
 			for (size_t k=0; k<p.Np; k++) {
 				x = &(pt[j+1][k*6]);
 				y = &(pt[j][k*6]);
@@ -68,6 +69,7 @@ void ParticleTracer::Run(const Parameter &p) {
 						x[l] = y[l];
 				}
 			}
+*/
 			j++;
 			t += dt;
 			if ((t-p.tb)*(t-p.te)>0) {

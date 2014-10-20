@@ -50,14 +50,16 @@ class ParticleTrace:
 	def data_stream(self, cx, cy, skip=1):
 		"""Generator for data stream"""
 		if self.rev:
-			i = self.Nts 
+			i = self.Nts - 1 
 			while i > 0:
-				i -= skip
+				print 'Frame ', i
 				f = self.data[i,:].reshape(self.Np,6)
+				i -= skip
 				yield f[:,cx], f[:,cy]
 		else:
 			i = 0
-			while i < self.Nts-1:
+			while i < self.Nts:
+				print 'Frame ', i
 				f = self.data[i,:].reshape(self.Np,6)
 				i += skip
 				yield f[:,cx], f[:,cy]
@@ -144,8 +146,7 @@ class AnimatedScatterPlot2D:
 		plt.ylim(u[2], u[3])
 		plt.xlabel('X (de)')
 		plt.ylabel('Z (de)')
-		self.mov = ani.FuncAnimation(self.fig, self.update, interval=1,
-			init_func=self.setup_plot, blit=True)
+		self.mov = ani.FuncAnimation(self.fig, self.update, frames=pt.Nts/skip, interval=1, init_func=self.setup_plot, blit=True)
 
 	def setup_plot(self):
 		"""Initial drawing of the scatter plot"""
@@ -163,38 +164,14 @@ class AnimatedScatterPlot2D:
 	def show(self):
 		plt.show()
 
-
-class FFMpeg:
-	"""Create a movie using matplotlib.animations.FFMpegWriter"""
-	def __init__(self, fname, fig, pt, cx, cy, fov, skip=1, metadata={}, fps=15, Nf=150):
-		self.fname = fname
-		self.fig = fig
-		self.pt = pt
-		self.stream = pt.data_stream(cx, cy, skip)
-		self.writer = ani.FFMpegWriter(metadata=metadata, fps=fps)
-		self.setup_plot(fov)
-		self.make_movie(Nf)
-
-	def setup_plot(self, fov):
-		"""Initial drawing of the scatter plot"""
-		x = []; y = []
-		u = map(float,fov.split(','))
-		plt.xlim(u[0], u[1])
-		plt.ylim(u[2], u[3])
-		plt.xlabel('X (de)')
-		plt.ylabel('Z (de)')
-		self.scat, = plt.plot(x, y, 'bo')
-
-	def make_movie(self, Nf):
-		"""Update the scatter plot"""
-		with self.writer.saving(self.fig, self.fname, Nf):
-			for i in range(Nf):
-				x, y = next(self.stream)
-				# Set x and y data...
-				self.scat.set_data(x, y)
-				print i
-				self.writer.grab_frame(frame_format='rgba')
-
+	def save(self,fname,metadata,fps,cx,cy,skip):
+#		self.stream = pt.data_stream(cx, cy, skip)
+#		writer = ani.FFMpegWriter(metadata=metadata, fps=fps)
+#		x = []
+#		y = []
+#		self.scat.set_data(x, y)
+		writer = ani.MencoderWriter(metadata=metadata, fps=fps)
+		self.mov.save(fname,writer=writer,extra_args=['-vcodec', 'libx264','--verbose-debug'])
 
 
 ### main program ###
@@ -236,20 +213,11 @@ if __name__ == "__main__":
 	
 	pt = ParticleTrace(args.datafile, args.reverse)
 
-	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, fov=args.fov, skip=2)
-	myani.show()
+	myskip = 10
+	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, fov=args.fov, skip=myskip)
+#	myani.show()
 
-
-	fig = plt.figure('Particle Tracer')
-	plt.title(args.plot+', '+str(args.time))
-	pcm = plt.pcolormesh(fX, fY, fZ)
-	plt.axis('tight')
-	fig.colorbar(pcm)
-
+	mname = args.datafile.replace('dat','mp4')
 	metadata = dict(title='Particle Tracer', artist='Matplotlib',
 		comment='velocity grid')
-	mname = args.datafile.replace('dat','mp4')
-	print mname
-	mymov = FFMpeg(mname, fig, pt, cx=0, cy=2, fov=args.fov, skip=50,
-		metadata=metadata,fps=20,Nf=pt.Nts/50)
-
+	myani.save(mname, metadata, fps=35,cx=0,cy=2,skip=myskip)
