@@ -48,11 +48,14 @@ class ParticleTrace:
 
 	def data_stream(self, cx, cy, skip=1):
 		"""Generator for data stream"""
-		i = self.Nts 
-		while i > 0:
-			i -= skip
+#		i = self.Nts 
+#		while i > 0:
+#			i -= skip
+		i = 0
+		while i < self.Nts-1:
 			f = self.data[i,:].reshape(self.Np,6)
 			yield f[:,cx], f[:,cy]
+			i += skip
 
 
 class FieldNASA:
@@ -127,13 +130,15 @@ class Figure2D:
 
 class AnimatedScatterPlot2D:
 	"""Animated scatter plot using matplotlib.animations.FuncAnimation."""
-	def __init__(self, fig, pt, cx, cy, skip=1):
+	def __init__(self, fig, pt, cx, cy, fov, skip=1):
 		self.pt = pt
 		self.stream = pt.data_stream(cx, cy, skip)
 		self.fig = fig
-		plt.xlim(50, 270)
-		plt.ylim(-35, 35)
-		plt.xlabel('x')
+		u = map(float,fov.split(','))
+		plt.xlim(u[0], u[1])
+		plt.ylim(u[2], u[3])
+		plt.xlabel('X (de)')
+		plt.ylabel('Z (de)')
 		self.mov = ani.FuncAnimation(self.fig, self.update, interval=1,
 			init_func=self.setup_plot, blit=True)
 
@@ -156,21 +161,23 @@ class AnimatedScatterPlot2D:
 
 class FFMpeg:
 	"""Create a movie using matplotlib.animations.FFMpegWriter"""
-	def __init__(self, fname, fig, pt, cx, cy, skip=1, metadata={}, fps=15, Nf=150):
+	def __init__(self, fname, fig, pt, cx, cy, fov, skip=1, metadata={}, fps=15, Nf=150):
 		self.fname = fname
 		self.fig = fig
 		self.pt = pt
 		self.stream = pt.data_stream(cx, cy, skip)
 		self.writer = ani.FFMpegWriter(metadata=metadata, fps=fps)
-		self.setup_plot()
+		self.setup_plot(fov)
 		self.make_movie(Nf)
 
-	def setup_plot(self):
+	def setup_plot(self, fov):
 		"""Initial drawing of the scatter plot"""
-#		self.fig = plt.figure()
 		x = []; y = []
-		plt.xlim(10, 60)
-		plt.ylim(-3, 1)
+		u = map(float,fov.split(','))
+		plt.xlim(u[0], u[1])
+		plt.ylim(u[2], u[3])
+		plt.xlabel('X (de)')
+		plt.ylabel('Z (de)')
 		self.scat, = plt.plot(x, y, 'bo')
 
 	def make_movie(self, Nf):
@@ -191,49 +198,48 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description=
         	'Draw particle trace')
 	parser.add_argument('datafile', help='particle tracer data file')
-	parser.add_argument('--datapath', help='the data path')
-	parser.add_argument('-s', dest='source',
-		help='source of data (LANL or NASA)')
+	parser.add_argument('--path', help='the data path')
 	parser.add_argument('-t', dest='time', help='choose a time slice')
-	parser.add_argument('--plot-B', action='store_false',
-		help='plot B field')
-	parser.add_argument('--plot-E', action='store_true',
-		help='plot E field')
-#	parser.add_argument('--Np', help='number of particles')
-#	parser.add_argument('--Nts', help='number of time slices')
+	parser.add_argument('--plot', help='plot background field')
+	parser.add_argument('--grid', help='nx,ny,nz')
+	parser.add_argument('--fov', help='xmin,xmax,zmin,zmax')
 	args = parser.parse_args()
 
 
-	if args.source == 'NASA':
-		fname = args.datapath + '/fields-'
-#		time = '{0:05d}'.format(args.time)
-		fname = fname + args.time.zfill(5) + '.dat'
-#		if args.grid:
-#			grid = map(int, args.grid.strsplit(','))
-#		else:
+	fname = args.path + '/fields-'
+	fname = fname + args.time.zfill(5) + '.dat'
+
+	if args.grid:
+		grid = map(int, args.grid.split(','))
+	else:
 		grid = [1000, 1, 800]
-		emf = FieldNASA(fname, grid)
-		X = emf.data['xe']
-		Y = emf.data['ze']
-		print emf.data['mass']
-		print emf.data['q']
-		print emf.data['wpewce']
+
+	emf = FieldNASA(fname, grid)
+	X = emf.data['xe']
+	Y = emf.data['ze']
+	fX,fY = numpy.meshgrid(X,Y)
+	fZ = emf.data[args.plot]
 
 
 	fig = plt.figure('Particle Tracer')
-	fX,fY = numpy.meshgrid(X,Y)
-	fZ = emf.data['Ez']
+	plt.title(args.plot+', '+str(args.time))
+	pcm = plt.pcolormesh(fX, fY, fZ)
+	plt.axis('tight')
+	fig.colorbar(pcm)
+	
+	pt = ParticleTrace(args.datafile)
+	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, fov=args.fov, skip=2)
+	myani.show()
+
+
+	fig = plt.figure('Particle Tracer')
+	plt.title(args.plot+', '+str(args.time))
 	pcm = plt.pcolormesh(fX, fY, fZ)
 	plt.axis('tight')
 	fig.colorbar(pcm)
 
-	
-	pt = ParticleTrace(args.datafile)
-	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, skip=2)
-	myani.show()
-
-	metadata = dict(title='Particle Tracer', artist='Matplotlib',
-		comment='velocity grid')
-#	mymov = FFMpeg('test.mp4', fig, pt, cx=0, cy=2, skip=50,
-#		metadata=metadata,fps=20,Nf=200)
+#	metadata = dict(title='Particle Tracer', artist='Matplotlib',
+#		comment='velocity grid')
+#	mymov = FFMpeg('test.mp4', fig, pt, cx=0, cy=2, fov=args.fov, skip=50,
+#		metadata=metadata,fps=20,Nf=pt.Nts/50)
 

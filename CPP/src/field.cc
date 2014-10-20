@@ -8,6 +8,7 @@
 EMField::EMField(const Parameter &p) {
 
 	qom = -1.;
+//	qom = 1./25;
 	nxC = 1;
 	nyC = p.ny / 2;
 	nzC = p.nz / 2;
@@ -154,12 +155,8 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 	fz = scaleZ(r[2]);
 	ix = floor(fx);
 	iz = floor(fz);
-	if ((ix < 0) || (ix >= 1000))
-		std::cout << r[0] << " " << ix << std::endl;
-	if ((iz < 0) || (iz >= 800))
-		std::cout << iz << std::endl;
-	assert (ix >=0 && ix <1000);
-	assert (iz >=0 && iz <800);
+	assert (ix >= 1 && ix < 999);
+	assert (iz >= 1 && iz < 799);
 	fx -= ix;
 	fz -= iz;	
 	wmm = (1.-fx) * (1.-fz);

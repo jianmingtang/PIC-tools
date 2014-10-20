@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
 	("vz", bpo::value<std::string>(&vzR), "Vz range")
 	("ri", bpo::value<std::string>(&ri), "start position")
 	("output,o", bpo::value<std::string>(&para.outf)->
-		default_value("./out.dat"), "Output file for particle trace")
+		default_value(""), "Output file for particle trace")
 	;
 	allOpt.add(cOpt).add(fOpt).add(tOpt);
 	confOpt.add(fOpt).add(tOpt);

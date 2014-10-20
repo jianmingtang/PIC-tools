@@ -1,3 +1,4 @@
+#include <sstream>
 #include <cmath>
 #include "para.h"
 
@@ -34,10 +35,19 @@ void Parameter::Process_Tuple(size_t N, double *a, const std::string &s) {
 }
 
 void Parameter::Update() {
+	std::stringstream ss;
+
 	nvxyz = vxR.N * vyR.N * vzR.N;
 	if (nvxyz != 0) Np = nvxyz;
 
 	rsize = nx * nz;
+	ss << "pt-r" << r[0] << "_" << r[2] << "-v"
+		<< (vxR.max+vxR.min)/2 << "_"
+		<< (vyR.max+vyR.min)/2 << "_"
+		<< (vzR.max+vzR.min)/2 << "-t"
+		<< tb << "_" << te << ".dat";
+	outf = ss.str();
+
 // scaling factors (obsolete)
 // 25 is the mass ratio
 //	rfac = sqrt(25.);

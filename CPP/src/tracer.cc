@@ -25,16 +25,13 @@ ParticleTracer::ParticleTracer(EMField &f, const Particle &pi,
 	pt.push_back(pi);
 }
 
-void Check_Bounds(double *x) {
-}
-
 void ParticleTracer::Run(const Parameter &p) {
 #ifdef HAVE_PYTHON
 //	PyPlot bgplot(p);
 #endif
 	Particle a;
 	double t = p.tb, dt = p.ts;
-	double *x;
+	double *x, *y;
 	size_t j = 0;
 	bool stop = false;
 	int dir;
@@ -56,27 +53,31 @@ void ParticleTracer::Run(const Parameter &p) {
 //		bgplot.Update_Data(*field);
 //		bgplot.Plot();
 #endif
-	std::cout << t << " " << i << " " << i+is << std::endl;
 		while ((t-i) * (t-i-is) <= 0) {
-			std::cout << t << " ";
+//			std::cout << t << " ";
 			a = Particle(p);
 			pt.push_back(a);
 			field->Set_Time(t);
 			Move_One_Time_Step(dt, &(pt[j][0]),
 				&(pt[j+1][0]), &pt[j].f[0]);
-			x = &(pt[j][0]);
-			if (x[0] < 0 || x[0] > 320 || abs(x[2]) > 64) {
+			for (size_t k=0; k<p.Np; k++) {
+				x = &(pt[j+1][k*6]);
+				y = &(pt[j][k*6]);
+				if (x[0] < 0 || x[0] > 320 || abs(x[2]) > 63) {
+					for (size_t l =0; l <6;l++)
+						x[l] = y[l];
+				}
+			}
+			j++;
+			t += dt;
+			if ((t-p.tb)*(t-p.te)>0) {
 				stop = true;
 				break;
 			}
-//			Check_Bounds(&pt[j].data[0]);
-			j++;
-			t += dt;
 		}
 		if (stop) break;
-		if ((t-p.tb)*(t-p.te)>0) break;
 	}
-	std::cout << pt.size() << std::endl;
+	std::cout << "\nNumber of time steps: " << pt.size() << std::endl;
 } 
 
 void ParticleTracer::Write(const Parameter &p) {
