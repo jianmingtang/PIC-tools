@@ -30,12 +30,13 @@ class ParticleTrace:
 	"""
 	This class is used to store particle trace data in ndarray
 	"""
-	def __init__(self, fname):
+	def __init__(self, fname, reverse=False):
 		"""
 		fname: data filename
 		Np: number of particles
 		Nts: number of time slices
 		"""
+		self.rev = reverse
 		fh = open(fname,'r')
 		buf = fh.readline().split(' ')
 		self.Np = int(buf[0])
@@ -48,14 +49,18 @@ class ParticleTrace:
 
 	def data_stream(self, cx, cy, skip=1):
 		"""Generator for data stream"""
-#		i = self.Nts 
-#		while i > 0:
-#			i -= skip
-		i = 0
-		while i < self.Nts-1:
-			f = self.data[i,:].reshape(self.Np,6)
-			yield f[:,cx], f[:,cy]
-			i += skip
+		if self.rev:
+			i = self.Nts 
+			while i > 0:
+				i -= skip
+				f = self.data[i,:].reshape(self.Np,6)
+				yield f[:,cx], f[:,cy]
+		else:
+			i = 0
+			while i < self.Nts-1:
+				f = self.data[i,:].reshape(self.Np,6)
+				i += skip
+				yield f[:,cx], f[:,cy]
 
 
 class FieldNASA:
@@ -203,6 +208,8 @@ if __name__ == "__main__":
 	parser.add_argument('--plot', help='plot background field')
 	parser.add_argument('--grid', help='nx,ny,nz')
 	parser.add_argument('--fov', help='xmin,xmax,zmin,zmax')
+	parser.add_argument('--reverse', action='store_true',
+		help='xmin,xmax,zmin,zmax')
 	args = parser.parse_args()
 
 
@@ -227,7 +234,8 @@ if __name__ == "__main__":
 	plt.axis('tight')
 	fig.colorbar(pcm)
 	
-	pt = ParticleTrace(args.datafile)
+	pt = ParticleTrace(args.datafile, args.reverse)
+
 	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, fov=args.fov, skip=2)
 	myani.show()
 
@@ -238,8 +246,10 @@ if __name__ == "__main__":
 	plt.axis('tight')
 	fig.colorbar(pcm)
 
-#	metadata = dict(title='Particle Tracer', artist='Matplotlib',
-#		comment='velocity grid')
-#	mymov = FFMpeg('test.mp4', fig, pt, cx=0, cy=2, fov=args.fov, skip=50,
-#		metadata=metadata,fps=20,Nf=pt.Nts/50)
+	metadata = dict(title='Particle Tracer', artist='Matplotlib',
+		comment='velocity grid')
+	mname = args.datafile.replace('dat','mp4')
+	print mname
+	mymov = FFMpeg(mname, fig, pt, cx=0, cy=2, fov=args.fov, skip=50,
+		metadata=metadata,fps=20,Nf=pt.Nts/50)
 
