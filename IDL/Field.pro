@@ -17,11 +17,11 @@
 
 
 ;+
-;	This class is used to store field data
+;	This class is used to load EM fields from PIC data
 ;-
 pro Field__define
 	compile_opt idl2
-	data = { Field, nss:0L, it:0L, dt:0., teti:0., $
+	data = { Field, fheader:'', nss:0L, it:0L, dt:0., teti:0., $
 		xmax:0., zmax:0., nnx:0L, nnz:0L, $
 		vxs:ptr_new(), vys:ptr_new(), vzs:ptr_new(), $
 		Bx:ptr_new(), By:ptr_new(), Bz:ptr_new(), $
@@ -31,14 +31,8 @@ pro Field__define
 		data2D:ptr_new(), data3D:ptr_new() }
 end
 
-function Field::init, fname,nss,nx,nz
-	it=lonarr(1)
-	dt=fltarr(1)
-	teti=fltarr(1)
-	xmax=fltarr(1)
-	zmax=fltarr(1)
-	nnx=lonarr(1)
-	nnz=lonarr(1)
+function Field::Init, fheader, nss, nx, nz
+	self.fheader = fheader
 	self.nss = nss
 	self.vxs = ptr_new(fltarr(nx,nz,nss))
 	self.vys = ptr_new(fltarr(nx,nz,nss))
@@ -55,6 +49,18 @@ function Field::init, fname,nss,nx,nz
 	self.mass = ptr_new(fltarr(nss))
 	self.q = ptr_new(fltarr(nss))
 	self.dfac = ptr_new(fltarr(nss))
+	return, 1
+end
+
+function Field::Update, time
+	it=lonarr(1)
+	dt=fltarr(1)
+	teti=fltarr(1)
+	xmax=fltarr(1)
+	zmax=fltarr(1)
+	nnx=lonarr(1)
+	nnz=lonarr(1)
+	fname = self.header + '-' + time + '.dat'
 	openu, id, fname, /f77_unformatted, /get_lun
 	readu, id, it,dt,teti,xmax,zmax,nnx,nnz, $
 		*self.vxs,*self.vys,*self.vzs, $
@@ -64,7 +70,7 @@ function Field::init, fname,nss,nx,nz
 	return, 1
 end
 
-function Field::get, var
+function Field::Get, var
 	if var eq 'Bx' then return, self.Bx else $
 	if var eq 'By' then return, self.By else $
 	if var eq 'Bz' then return, self.Bz else $
@@ -76,7 +82,7 @@ function Field::get, var
 	return, 0
 end
 
-pro Field::print
+pro Field::Print
 	print, format='("Field range: x=(",(F8.3),",",(F8.3),' $
 		+ '"), z=(",(F8.3),",",(F8.3),")")', $
 		(*self.xe)[0],(*self.xe)[-1],(*self.ze)[0],(*self.ze)[-1]

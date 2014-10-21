@@ -22,24 +22,30 @@
 @ParticleDistribution
 @Field
 
-pro draw_3D, fxyz, iso
+pro draw_3D, fxyz, iso, ax
+	grid = (size(fxyz))[1]
+	scale = (ax[-1] - ax[0]) / grid
 	fmax = max(fxyz)
 	isosurface, fxyz, fmax*iso, verts, conns
-	L = (size(fxyz))[1] - 1
-	c = L / 2
-	shade=bytscl(sqrt((verts[0,*]-c)^2+(verts[1,*]-c)^2+(verts[2,*]-c)^2))
-	Ll = L * .2
-	Lr = L * .8
+	verts = (verts - grid/2) * scale
+	shade=bytscl(sqrt((verts[0,*])^2+(verts[1,*])^2+(verts[2,*])^2))
+	Ll = ax[0] / 2
+	Lr = ax[-1] /2
 	scale3, xrange=[Ll,Lr],yrange=[Ll,Lr],zrange=[Ll,Lr]
 	nframes = 20
 	!p.font = 0
 	dev = !d.name
+	device, decompose=0
+	window,0,xs=800,ys=600
+	loadct, 39
 	for i = 0, nframes do begin
 		set_plot, 'z'
-		device, decompose=0, set_resolution=[640,480]
+		device, decompose=0, set_resolution=[800,600]
 		surface, dist(2), /nodata, ax=40, az=360.*i/nframes+5, $
 			xrange=[Ll,Lr], yrange=[Ll,Lr], zrange=[Ll,Lr], $
-			/save, charsize=2
+			/xstyle, /ystyle, /zstyle, $
+			/save, charsize=2, title='fxyz', $
+			xtitle='Vx', ytitle='Vy', ztitle='Vz'
 		image = polyshade(verts,conns,/t3d,shade=shade)
 		snapshot = tvrd()
 		set_plot, dev
@@ -51,86 +57,82 @@ pro draw_3D, fxyz, iso
 	endfor
 end
 
-function tracer, fname
-
-	Np = lonarr(1)
-	Nts = lonarr(1)
-	openr, id, fname, /get_lun
-	readf, id, Np, Nts
-	pt = fltarr(Np*6, Nts)
-	readu, id, pt
-	close, id
-
-	return, pt
+pro draw_dist_2D, data, title, range
+	scale = (range[1] - range[0]) / (size(data))[1]
+	im = image(data, title=title, font_size=20, $
+		rgb_table=13, min_value=min(data), max_value=max(data), $
+		margin=[0.12,0.12,0.2,0.1], aspect_ratio=0)
+	xax = axis('x', title='Vx', location=[0.12,0.12], $
+		axis_range=range, coord_transform=[range[0],scale], $
+		color='yellow', text_color='black', tickfont_size=16)
+	yax = axis('y', title='Vy', location=[0.12,0.12], $
+		axis_range=range, coord_transform=[range[0],scale], $
+		color='yellow', text_color='black', tickfont_size=16)
+	cb = colorbar(target=im, orientation=1, font_size=16, $
+		position=[0.9,0.12,0.96,0.9], /border)
 end
 
-pro draw_pic
 
+pro draw_pic, fname=fname
+
+;
+; Define number of species and grids
 	nss = 4
-	fname = 'fields-01750.dat'
-	nx = 1000
-	nz = 800
-	emf = Field(fname, nss, nx, nz)
-	emf.print
-	loadct, 39
-	device, decompose=0, retain=2
-	tvlct, 255,255,255,255
-	!p.background = 255
-	pt = tracer('out.dat')
+	grid = 101
 
-	cut = 200
-	xwid = (nx-cut*2)/0.9
-	ywid = (nz-cut*2)/0.9
-	window,0,xs=xwid,ys=ywid
-	Ex = *(emf.get('Ez'))
-	bg = bytscl(Ex(cut:nx-cut-1,cut:nz-cut-1))
-; works for > 8.3
-;	ct = colortable(39)
-;	im = image(bg,margin=[0.05,0.05,0.1,0.05],rgb_table=39)
-;	cb = colorbar(target=im,orientation=1,position=[0.91,0.05,0.96,0.95])
+;
+; Read in distribution function
+	PD = ParticleDistribution(fname, nss, grid)
+;
+; Print out location	
+	PD.print
+;
+; Get axes
+	ax = PD.get('axes')
+	xl = ax[0,1]
+	xr = ax[-1,1]
+;
+; Get fxy, species 3
+	fxy = (PD.get('fxy'))[*,*,3]
+;
+; Make a 2D plot
+	draw_dist_2D, fxy, 'fxy,s3', [xl,xr]
 
-	xmin = (*(emf.get('xe')))[0]
-	xmax = (*(emf.get('xe')))[-1]
-	zmin = (*(emf.get('ze')))[0]
-	zmax = (*(emf.get('ze')))[-1]
-	xl = xmin+(xmax-xmin)*cut/nx
-	xr = xmax-(xmax-xmin)*cut/nx
-	zl = zmin+(zmax-zmin)*cut/nz
-	zr = zmax-(zmax-zmin)*cut/nz
-	for i = 10000, 0, -20 do begin
-		tv, bg, (xwid-nx)/2+cut, (ywid-nz)/2+cut
-;		im.refresh
-		a = reform(pt[*,i],6,1000)
-;		plt = plot(a(0,*),a(2,*),xrange=[xl,xr],yrange=[zl,zr], $
-;			position=[0.05,0.05,0.9,0.95],/overplot, $
-;			linestyle=6, symbol='o')
-;		plt = scatterplot(a(0,*),a(2,*),xrange=[xl,xr],yrange=[zl,zr], $
-;			position=[0.05,0.05,0.9,0.95],/overplot, $
-;			symbol='o')
-		plot,xrange=[xl,xr],yrange=[zl,zr],a(0,*),a(2,*), $
-			psym=4,color=0,/noerase, $
-			/xstyle,/ystyle,xmargin=[0,0],ymargin=[0,0], $
-			position=[0.05,0.05,0.95,0.95]
-		wait, 0.1
-	endfor
+
+;
+; Add species 1 & 3 of the reduced f's
+	PD.addR, [1,3]
+;
+; Get reduced f (0:xy, 1:xz, 2:yz)
+; In this case, fRxy is a pointer
+	fRxy = (PD.get('addR'))[0]
+;
+; Make a 2D plot
+	draw_dist_2D, *fRxy, 'fxy', [xl,xr]
+
+;
+; Make a slice of 3D data 
+	PD.cut, 'z', 0, 100
+;
+; Add species 1 & 3 of the slice
+	PD.add2D, [1,3]
+;
+; Get the slice
+	fcut = PD.get('add2D')
+;
+; Make a 2D plot
+	draw_dist_2D, fcut, 'fcut,z,30,70', [xl,xr]
+
+;
+; Add species 1 & 3 of fxyz
+	PD.add3D, [1,3]
+	fxyz = PD.get('add3D')
+;
+; Make a 3D plot
+	draw_3D, fxyz, 0.3, ax[*,1]
 	wait, 100
 
-;	fname = 'NASA/24.dat'
-;	grid = 101
-;	PD = ParticleDistribution(fname, nss, grid)
-;	PD.print
-;	ax = *(PD.get('axes'))
-
-	
-;	PD.addR, [1,3]
-;	fR = PD.get('addR')
-;	tv, (*fR[0])[*,*,0]
-;	wait, 100
-
-;	PD.add3D, [1,3]
-;	fxyz = PD.get('add3D')
-;	draw_3D, *fxyz, 0.3
+;
+; IDL's interative tool for 3D data
 ;	xvolume, bytscl(*fxyz)
-;	wait, 100
-
 end
