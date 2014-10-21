@@ -1,9 +1,12 @@
 #include <iostream>
-#include <boost/numeric/odeint/integrate/integrate.hpp>
+#include <cmath>
 #include "tracer.h"
 #include "config.h"
 #ifdef HAVE_PYTHON
 	#include "pyplot.h"
+#endif
+#ifdef HAVE_ODEINT_HPP
+	#include <boost/numeric/odeint/integrate/integrate.hpp>
 #endif
 
 
@@ -15,7 +18,9 @@
 #define iVz 5
 
 
-using namespace boost::numeric;
+#ifdef HAVE_ODEINT_HPP
+	using namespace boost::numeric;
+#endif
 
 
 ParticleTracer::ParticleTracer(EMField &f, const Particle &pi,
