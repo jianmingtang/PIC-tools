@@ -28,6 +28,8 @@ pro Field__define
 		Ex:ptr_new(), Ey:ptr_new(), Ez:ptr_new(), $
 		dns:ptr_new(), xe:ptr_new(), ze:ptr_new(), $
 		mass:ptr_new(), q:ptr_new(), dfac:ptr_new(), $
+		pxx:ptr_new(), pyy:ptr_new(), pzz:ptr_new(), $
+		pxy:ptr_new(), pxy:ptr_new(), pyz:ptr_new(), $
 		data2D:ptr_new(), data3D:ptr_new() }
 end
 
@@ -49,10 +51,16 @@ function Field::Init, fheader, nss, nx, nz
 	self.mass = ptr_new(fltarr(nss))
 	self.q = ptr_new(fltarr(nss))
 	self.dfac = ptr_new(fltarr(nss))
+	self.pxx = ptr_new(fltarr(nx,nz,nss))
+	self.pyy = ptr_new(fltarr(nx,nz,nss))
+	self.pzz = ptr_new(fltarr(nx,nz,nss))
+	self.pxy = ptr_new(fltarr(nx,nz,nss))
+	self.pxz = ptr_new(fltarr(nx,nz,nss))
+	self.pyz = ptr_new(fltarr(nx,nz,nss))
 	return, 1
 end
 
-function Field::Update, time
+function Field::Update, ftime
 	it=lonarr(1)
 	dt=fltarr(1)
 	teti=fltarr(1)
@@ -60,12 +68,18 @@ function Field::Update, time
 	zmax=fltarr(1)
 	nnx=lonarr(1)
 	nnz=lonarr(1)
-	fname = self.header + '-' + time + '.dat'
+	time=dblarr(1)
+	wpewce=fltarr(1)
+	fname = self.header + '-' + ftime + '.dat'
 	openu, id, fname, /f77_unformatted, /get_lun
-	readu, id, it,dt,teti,xmax,zmax,nnx,nnz, $
-		*self.vxs,*self.vys,*self.vzs, $
-		*self.Bx,*self.By,*self.Bz,*self.Ex,*self.Ey,*self.Ez, $
-		*self.dns,*self.xe,*self.ze,*self.mass,*self.q
+	readu, id, it, dt, teti, xmax, zmax, nnx, nnz, $
+		*self.vxs, *self.vys, *self.vzs, $
+		*self.Bx, *self.By, *self.Bz, $
+		*self.Ex, *self.Ey, *self.Ez, $
+		*self.dns,*self.xe,*self.ze,*self.mass,*self.q, $
+		time,wpewce,*self.dfac, $
+		*self.pxx, *self.pyy, *self.pzz, $
+		*self.pxy, *self.pxz, *self.pyz
 	close, id
 	return, 1
 end
@@ -79,6 +93,12 @@ function Field::Get, var
 	if var eq 'Ez' then return, self.Ez else $
 	if var eq 'xe' then return, self.xe else $
 	if var eq 'ze' then return, self.ze else $
+	if var eq 'pxx' then return, self.pxx else $
+	if var eq 'pyy' then return, self.pyy else $
+	if var eq 'pzz' then return, self.pzz else $
+	if var eq 'pxy' then return, self.pxy else $
+	if var eq 'pxz' then return, self.pxz else $
+	if var eq 'pyz' then return, self.pyz else $
 	return, 0
 end
 
