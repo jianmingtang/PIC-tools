@@ -50,9 +50,9 @@ class Figure2D:
 # The default ordering for 2D meshgrid is Fortran style
 		title = name.replace(',','_')
 		self.figs.append((title, plt.figure(title)))
-		fX, fY = numpy.meshgrid(X, Y)
 		for i in range(4):
 			ax = plt.subplot('22'+str(i+1))
+			fX, fY = numpy.meshgrid(X[i], Y[i])
 			pcm = ax.pcolormesh(fX, fY, fZ[i])
 			ax.axis('tight')
 			self.figs[-1][1].colorbar(pcm)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 		help='Combining species [e.g. 1,3]')
 	parser.add_argument('--save-png', action='store_true',
 		help='save plots in png')
-	parser.add_argument('--plot-B', action='store_false',
+	parser.add_argument('--plot-B', action='store_true',
 		help='plot B field')
 	parser.add_argument('--plot-E', action='store_true',
 		help='plot E field')
@@ -164,8 +164,10 @@ if __name__ == "__main__":
 	for f in fcomp:
 #		fig.add_one(args.source + ' ' + f + ' t=' + args.time,
 		fn = f.title() + ',t=' + args.time
-		if args.plot_F or args.plot_P or args.plot_V:
+		if args.plot_F:
 			fig.add_quad(fn, X, Y, data[f])
+		elif args.plot_P or args.plot_V:
+			fig.add_quad(fn, [X]*4, [Y]*4, data[f])
 		else:
 			fig.add_one(fn, X, Y, data[f])
 #			fig.add_streamline(X,Y,data['Bx'],data['Bz'])
