@@ -15,6 +15,7 @@
 
 
 import numpy
+import struct
 
 
 class FieldLANL:
@@ -37,3 +38,20 @@ class FieldLANL:
 			f.seek(skip)
 			self.data[k] = (numpy.fromfile(f, datatype))[0][0]
 			f.close()
+
+	def read_from_info(info_file):
+		grid = []
+		L = []
+		f = open(info_file, 'rb')
+		f.read(4)
+		for i in range(3):
+			# Python 3:
+			# grid.append(int.from_bytes(f.read(4),
+			#	byteorder='little'))
+			grid.append(struct.unpack('<I',f.read(4))[0])
+		f.read(4)
+		f.read(4)
+		for i in range(3):
+			L.append(struct.unpack('<f',f.read(4))[0])
+		f.close()
+		return grid, L
