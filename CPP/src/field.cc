@@ -163,8 +163,11 @@ void EMField::Get_fab(double *f, double *r, const Array2D<float> *F) const {
 	wpm = fx * (1.-fz);
 	wmp = (1.-fx) * fz;
 	wpp = fx * fz;
-	if (wmm < 0) std::cout << fx <<" " << fz << std::endl;
-	if (wpm < 0) std::cout << fx <<" " << fz << std::endl;
+#ifdef DEBUG
+	if (wmm < 0 || wpm < 0 || wmp < 0 | wpp< 0) {
+		std::cout << fx << " " << fz << std::endl;
+	}
+#endif
 	assert(wmm>=0);
 	assert(wpm>=0);
 	assert(wmp>=0);

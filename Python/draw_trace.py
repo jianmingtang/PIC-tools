@@ -215,13 +215,13 @@ if __name__ == "__main__":
 
 	myskip = 10
 	myani = AnimatedScatterPlot2D(fig, pt, cx=0, cy=2, fov=args.fov, skip=myskip)
-#	myani.show()
+	myani.show()
 
 	if args.reverse:
 		mname = args.datafile.replace('.dat','_R.mp4')
 	else:
 		mname = args.datafile.replace('dat','mp4')
 
-	metadata = dict(title='Particle Tracer', artist='Matplotlib',
-		comment='velocity grid')
-	myani.save(mname, metadata, fps=35,cx=0,cy=2,skip=myskip)
+#	metadata = dict(title='Particle Tracer', artist='Matplotlib',
+#		comment='velocity grid')
+#	myani.save(mname, metadata, fps=35,cx=0,cy=2,skip=myskip)

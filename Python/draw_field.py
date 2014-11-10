@@ -24,6 +24,7 @@ import struct
 import math
 import numpy
 import pylab
+import matplotlib.pyplot as plt
 import argparse
 
 
@@ -114,9 +115,17 @@ class Figure2D:
 		self.figs.append((title,pylab.figure(title)))
 		fX,fY = numpy.meshgrid(X,Y)
 		pcm = pylab.pcolormesh(fX, fY, fZ)
+		pylab.xlabel('X (de)')
+		pylab.ylabel('Z (de)')
 		pylab.axis('tight')
 		self.figs[-1][1].colorbar(pcm)
 		pylab.title(name)
+
+	def add_streamline(self, X, Y, U, V):
+		plt.streamplot(X,Y,U,V,color='k',density=[5,0.7])
+
+	def add_vectors(self, X, Y, U, V):
+		Q = plt.quiver(X[::50],Y[::50],U[::50,::50],V[::50,::50],pivot='mid',color='k')
 
 	def savefig(self):
 		"""
@@ -153,12 +162,18 @@ if __name__ == "__main__":
 	parser.add_argument('datapath', help='the data path')
 	parser.add_argument('-s', dest='source',
 		help='source of data (LANL or NASA)')
+	parser.add_argument('-t', dest='time',
+		help='choose a time slice')
 	parser.add_argument('--plot-B', action='store_false',
 		help='plot B field')
 	parser.add_argument('--plot-E', action='store_true',
 		help='plot E field')
-	parser.add_argument('-t', dest='time',
-		help='choose a time slice')
+	parser.add_argument('--plot-P', action='store_true',
+		help='plot pressure tensor')
+	parser.add_argument('--plot-V', action='store_true',
+		help='plot velocity field')
+	parser.add_argument('--sp', default=1,
+		help='choose a species to plot (for V or P)')
 	parser.add_argument('--grid',
 		help='number of grid points, e.g. nx,ny,nz')
 	parser.add_argument('--save-png', action='store_true',
@@ -208,9 +223,20 @@ if __name__ == "__main__":
 		fcomp = ['Bx','By','Bz']
 	if args.plot_E:
 		fcomp = ['Ex','Ey','Ez']
+	if args.plot_V:
+		fcomp = ['vxs','vys','vzs']
+	if args.plot_P:
+		fcomp = ['pxx','pyy','pzz','pxy','pxz','pyz']
 	for f in fcomp:
-		fig.add_one(args.source + ' ' + f + ' ' + args.time,
-			emf.data[f], X, Y)
+#		fig.add_one(args.source + ' ' + f + ' t=' + args.time,
+		if args.plot_P or args.plot_V:
+			plotdata = emf.data[f][1] + emf.data[f][3]
+		else:
+			plotdata = emf.data[f]
+		fig.add_one(f.title() + ' t=' + args.time,
+			plotdata, X, Y)
+		fig.add_streamline(X,Y,emf.data['Bx'],emf.data['Bz'])
+#		fig.add_vectors(X,Y,emf.data['Bx'],emf.data['Bz'])
 
-	pylab.show()
+	plt.show()
 	if args.save_png: fig.savefig()

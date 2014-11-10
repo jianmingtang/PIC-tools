@@ -65,7 +65,8 @@ class ParticleDistribution:
 		s += 'Bin location: '
 		s += 'x=(%4g,%4g), z=(%4g,%4g)\n' % (self.data['xlo'],
 			self.data['xhi'],self.data['zlo'],self.data['zhi'])
-		s += 'Axes max: %4g\n' % self.data['axes'][0][-1]
+# This is hard coded to species 1
+		s += '(Hard coded) Axes max: %4g\n' % self.data['axes'][1][-1]
 		s += '\n'
 		for i in range(self.nsp):
 			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
@@ -372,7 +373,7 @@ if __name__ == "__main__":
 		help='number of species (default = 4)')
 	parser.add_argument('--cut',
 		help='make a 2D cut [e.g. x,49,51]')
-	parser.add_argument('--sp', default=0,
+	parser.add_argument('--sp', default=1,
 		help='choose a species to plot for 3D')
 	parser.add_argument('--iso',
 		help='Set the iso value (in ratio of fmax) for 3D' \
@@ -430,6 +431,7 @@ if __name__ == "__main__":
 			splist = args.add
 			splist = splist.replace(',','_')
 			PD.add3D(args.add.split(','))
+# TODO: axes should be changed here
 			data3D = PD.data3D.ravel()
 		else:
 			splist = (args.sp)

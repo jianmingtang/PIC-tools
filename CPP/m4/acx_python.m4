@@ -1,8 +1,8 @@
 AC_DEFUN([ACX_PYTHON], [
-AC_PREREQ(2.50)
+AC_PREREQ(2.60)
 
 dnl Check Python Path and Version
-AM_PATH_PYTHON([2.6])
+AM_PATH_PYTHON([2.7])
 
 dnl Check Python library
 AC_CHECK_LIB(python$PYTHON_VERSION, Py_Initialize, pylib=yes, pylib=no)

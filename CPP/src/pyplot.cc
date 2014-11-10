@@ -47,7 +47,8 @@ void PyPlot::Plot()
 	PyObject_CallObject (pFuncCB, pArgs);
 
 	PyRun_SimpleString("pylab.axis('tight')");
-	PyRun_SimpleString("pylab.show()");
+	PyRun_SimpleString("pylab.ion()");
+//	PyRun_SimpleString("pylab.show()");
 }
 
 #endif

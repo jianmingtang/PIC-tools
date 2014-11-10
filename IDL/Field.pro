@@ -85,6 +85,9 @@ function Field::Update, ftime
 end
 
 function Field::Get, var
+	if var eq 'vxs' then return, self.vxs else $
+	if var eq 'vys' then return, self.vys else $
+	if var eq 'vzs' then return, self.vzs else $
 	if var eq 'Bx' then return, self.Bx else $
 	if var eq 'By' then return, self.By else $
 	if var eq 'Bz' then return, self.Bz else $

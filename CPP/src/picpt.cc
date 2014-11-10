@@ -1,7 +1,7 @@
 /*
     picpt: Particle in Cell Particle Tracing
 
-    Copyright (C) 2014  Jian-Ming Tang <jian.ming.tang@gmail.com>
+    Copyright (C) 2014  Jian-Ming Tang <jmtang@mailaps.org>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -183,6 +183,9 @@ int main(int argc, char *argv[]) {
 		return EXIT_SUCCESS;
 	}
 
+#ifdef DEBUG
+	std::cout << "Debug mode is on.\n\n";
+#endif
 	para.Show_Info();
 
 // EM fields

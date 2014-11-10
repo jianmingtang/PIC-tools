@@ -18,6 +18,9 @@ AC_CHECK_HEADER($boost/odeint.hpp,
 	AC_DEFINE(HAVE_ODEINT_HPP,1,"Define to 1 if exists"),,)
 
 AC_MSG_CHECKING([for Python Matplotlib support])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug],
+        [enable debug (default is disable)]),
+	AC_DEFINE(DEBUG,1,"Define to 1 if debug mode"),)
 AC_ARG_ENABLE(python, AC_HELP_STRING([--disable-python],
         [disable python (default is enable)]), python=disabled, python=enabled)
 AC_MSG_RESULT($python)

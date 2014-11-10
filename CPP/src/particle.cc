@@ -29,12 +29,15 @@ void Particle::Set_Up_Uniform(const Parameter &p) {
 	double vxR = p.vxR.max - p.vxR.min;
 	double vyR = p.vyR.max - p.vyR.min;
 	double vzR = p.vzR.max - p.vzR.min;
-	size_t vxS = p.vxR.N - 1;
-	size_t vyS = p.vyR.N - 1;
-	size_t vzS = p.vzR.N - 1;
+	size_t vxS = p.vxR.N > 1 ? p.vxR.N - 1 : 1;
+	size_t vyS = p.vyR.N > 1 ? p.vyR.N - 1 : 1;
+	size_t vzS = p.vzR.N > 1 ? p.vzR.N - 1 : 1;
 
 	f = std::vector<double>(p.Np * N_DIMS);
 
+//	if (vxS == 0) vxS = 1;
+//	if (vyS == 0) vyS = 1;
+//	if (vzS == 0) vzS = 1;
 	for (i = 0; i < p.vxR.N; ++i) {
 		vx = p.vxR.min + vxR * i / vxS;
 		for (j = 0; j < p.vyR.N; ++j) {

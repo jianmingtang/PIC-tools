@@ -32,7 +32,7 @@ ParticleTracer::ParticleTracer(EMField &f, const Particle &pi,
 
 void ParticleTracer::Run(const Parameter &p) {
 #ifdef HAVE_PYTHON
-//	PyPlot bgplot(p);
+	PyPlot bgplot(p);
 #endif
 	Particle a;
 	double t = p.tb, dt = p.ts;
@@ -54,9 +54,10 @@ void ParticleTracer::Run(const Parameter &p) {
 
 	for (int i = ib; (p.ftb<=i)&&(i<=p.fte) ; i += is) {
 		field->Update(i,i + is);
+		std::cout << i << std::endl;
 #ifdef HAVE_PYTHON
-//		bgplot.Update_Data(*field);
-//		bgplot.Plot();
+		bgplot.Update_Data(*field);
+		bgplot.Plot();
 #endif
 		while ((t-i) * (t-i-is) <= 0) {
 //			std::cout << t << " ";
@@ -91,6 +92,10 @@ void ParticleTracer::Write(const Parameter &p) {
 	unsigned int ibuf;
 	float fbuf;
 	std::fstream ofs(p.outf.c_str());
+#ifdef DEBUG
+	std::string debugf = p.outf + "_txt";
+	std::ofstream ofsd(debugf.c_str());
+#endif
 	if (ofs) {
 		ofs.close();
 		std::string ans;
@@ -98,12 +103,13 @@ void ParticleTracer::Write(const Parameter &p) {
 		std::cin >> ans;
 		if (ans != "y" && ans != "Y")
 			throw std::invalid_argument("Data not saved!!!");
-		else
+		else {
 			ofs.open(p.outf.c_str(), std::ios::out | 
 				std::ios::trunc|std::ios::binary);
-
-	} else
+		}
+	} else {
 		ofs.open(p.outf.c_str(), std::ios::out|std::ios::binary);
+	}
 
 	ofs << p.Np << " " << pt.size() << "\n";
 /*
@@ -114,22 +120,33 @@ void ParticleTracer::Write(const Parameter &p) {
 */
 	for (size_t i = 0; i < pt.size(); ++i) {
 		for (size_t j = 0; j < p.Np; ++j) {
+/*
 			for (size_t k = 0; k < N_COORDS; ++k) {
-// switch to de scale
-//				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
-				fbuf = pt[i][j*N_DIMS+k];
-				ofs.write((char*)&fbuf, sizeof(fbuf));
+				ofs << pt[i][j*N_DIMS+k]/p.rfac << " ";
 			}
 			for (size_t k = N_COORDS; k < N_DIMS; ++k) {
-//				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
-				fbuf = pt[i][j*N_DIMS+k];
+				ofs << pt[i][j*N_DIMS+k]/p.vfac << " ";
+			}
+*/
+// switch to de scale
+			for (size_t k = 0; k < N_DIMS; ++k) {
+				fbuf = pt[i][j * N_DIMS + k];
+#ifdef DEBUG
+				ofsd << fbuf << " ";
+#endif
 				ofs.write((char*)&fbuf, sizeof(fbuf));
 			}
 		}
-//		ofs << "\n";
+#ifdef DEBUG
+		ofsd << "\n";
+#endif
 	}
 	ofs.close();
 	std::cout << "Data saved to " << p.outf << ".\n";
+#ifdef DEBUG
+	ofsd.close();
+	std::cout << "Data saved to " << debugf << ".\n";
+#endif
 }
 
 // Boris Procedure
@@ -151,9 +168,9 @@ void ParticleTracer::Move_One_Time_Step(double dt, double *xi,
 		ux = vxm + (vym * f[iBZ] - vzm * f[iBY]) * dt2;
 		uy = vym + (vzm * f[iBX] - vxm * f[iBZ]) * dt2;
 		uz = vzm + (vxm * f[iBY] - vym * f[iBX]) * dt2;
-		xo[j+iVx] = vxm + (uy*f[iBZ]-uz*f[iBY])*dt/(1+hm) + f[iEX]*dt2;
-		xo[j+iVy] = vym + (uz*f[iBX]-ux*f[iBZ])*dt/(1+hm) + f[iEY]*dt2;
-		xo[j+iVz] = vzm + (ux*f[iBY]-uy*f[iBX])*dt/(1+hm) + f[iEZ]*dt2;
+		xo[j+iVx] = vxm + (uy*f[iBZ]-uz*f[iBY])*dt/(hm+1) + f[iEX]*dt2;
+		xo[j+iVy] = vym + (uz*f[iBX]-ux*f[iBZ])*dt/(hm+1) + f[iEY]*dt2;
+		xo[j+iVz] = vzm + (ux*f[iBY]-uy*f[iBX])*dt/(hm+1) + f[iEZ]*dt2;
 		xo[j+iRx] = xi[j+iRx] + xo[j+iVx] * dt;
 		xo[j+iRy] = xi[j+iRy] + xo[j+iVy] * dt;
 		xo[j+iRz] = xi[j+iRz] + xo[j+iVz] * dt;
