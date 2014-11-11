@@ -19,9 +19,9 @@
 ;+
 ;	This class is used to load particle distibution data
 ;-
-pro ParticleDistribution__define
+pro Distribution__define
 	compile_opt idl2
-	data = { ParticleDistribution, nss:0L, grid:0L, $
+	data = { Distribution, nss:0L, grid:0L, $
 		axes:ptr_new(), bin:ptr_new(), ic:ptr_new(), $
 		fxyz:ptr_new(), fxy:ptr_new(), fxz:ptr_new(), fyz:ptr_new(), $
 		vxa:ptr_new(), vya:ptr_new(), vza:ptr_new(), $
@@ -29,7 +29,7 @@ pro ParticleDistribution__define
 		data3D:ptr_new() }
 end
 
-function ParticleDistribution::init, fname, nss, grid
+function Distribution::init, fname, nss, grid
 	self.nss = nss
 	self.grid = grid
 	self.axes = ptr_new(fltarr(grid,nss))
@@ -49,7 +49,7 @@ function ParticleDistribution::init, fname, nss, grid
 	return, 1
 end
 
-function ParticleDistribution::get, var
+function Distribution::get, var
 	if var eq 'axes' then return, *self.axes else $
 	if var eq 'fxyz' then return, *self.fxyz else $
 	if var eq 'fxy' then return, *self.fxy else $
@@ -61,7 +61,7 @@ function ParticleDistribution::get, var
 	return, 0
 end
 
-pro ParticleDistribution::print
+pro Distribution::print
 	print, format='("Bin location: x=(",(F6.3),",",(F6.3),' $
 		+ '"), z=(",(F6.3),",",(F6.3),")")', *self.bin
 ;	print, *self.ic
@@ -70,7 +70,7 @@ end
 ;+
 ;  Make a 2D cut perpendicular to 'dir' from rmin to rmax
 ;-
-pro ParticleDistribution::cut, dir, rmin, rmax
+pro Distribution::cut, dir, rmin, rmax
 	self.dataCUT = ptr_new(fltarr(self.grid,self.grid,self.nss))
 	if dir eq 'x' then $
 		*self.dataCUT = total((*self.fxyz)[rmin:rmax,*,*,*],1)
@@ -83,7 +83,7 @@ end
 ;+
 ;  Sum 2D cut data over species in sps
 ;-
-pro ParticleDistribution::add2D, sps
+pro Distribution::add2D, sps
 	self.data2D = ptr_new(fltarr(self.grid,self.grid))
 	foreach i, sps do begin
 		*self.data2D += (*self.dataCUT)[*,*,i]
@@ -93,7 +93,7 @@ end
 ;+
 ;  Sum reduced 2D data over species in sps
 ;-
-pro ParticleDistribution::addR, sps
+pro Distribution::addR, sps
 	for i = 0, 2 do begin
 		self.dataR[i] = ptr_new(fltarr(self.grid,self.grid))
 	endfor
@@ -107,7 +107,7 @@ end
 ;+
 ;  Sum 3D data over species in sps
 ;-
-pro ParticleDistribution::add3D, sps
+pro Distribution::add3D, sps
 	self.data3D = ptr_new(fltarr(self.grid,self.grid,self.grid))
 	foreach i, sps do begin
 		*self.data3D += (*self.fxyz)[*,*,*,i]

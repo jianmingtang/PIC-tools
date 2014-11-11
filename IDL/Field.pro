@@ -29,7 +29,7 @@ pro Field__define
 		dns:ptr_new(), xe:ptr_new(), ze:ptr_new(), $
 		mass:ptr_new(), q:ptr_new(), dfac:ptr_new(), $
 		pxx:ptr_new(), pyy:ptr_new(), pzz:ptr_new(), $
-		pxy:ptr_new(), pxy:ptr_new(), pyz:ptr_new(), $
+		pxy:ptr_new(), pxz:ptr_new(), pyz:ptr_new(), $
 		data2D:ptr_new(), data3D:ptr_new() }
 end
 
