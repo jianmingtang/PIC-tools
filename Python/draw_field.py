@@ -21,7 +21,7 @@
 
 
 import struct
-import math
+import thread
 import numpy
 import PIC
 import Figure
@@ -111,9 +111,9 @@ if __name__ == "__main__":
 		field = PIC.FieldNASA(fname, grid)
 		X = field['xe']
 		Y = field['ze']
-		print field['mass']
-		print field['q']
-		print field['wpewce']
+#		print field['mass']
+#		print field['q']
+#		print field['wpewce']
 
 	else:
 		print 'No source selected'
@@ -133,8 +133,11 @@ if __name__ == "__main__":
 		flist = ['pxx','pyy','pzz','pxy','pxz','pyz']
 		draw_fields(fig, field, flist, 4)
 
-# display all figures
-	fig.show()
+# release the memory for data storage
+	field = 0
 
-# save all figures
+# save or display all figures
+# a significant amount of memory is required for the saving operation
+# NASA data takes about 6 GB to handle one 4-panel figure at a time
 	if args.save_png:  fig.savefig()
+	else:  fig.show()

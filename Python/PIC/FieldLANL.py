@@ -39,6 +39,9 @@ class FieldLANL:
 			self.data[k] = (numpy.fromfile(f, datatype))[0][0]
 			f.close()
 
+	def __getitem__(self, key):
+		return self.data[key]
+
 	def read_from_info(info_file):
 		grid = []
 		L = []
