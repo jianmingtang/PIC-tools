@@ -90,7 +90,8 @@ class CtrlPanel(wx.Panel):
 		self.p = parent
 
 		listoffields = ['Bx','By','Bz','Ex','Ey','Ez',
-			'vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz']
+			'vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz',
+			'dns']
 		self.RB = wx.RadioBox(self, label='Select a field',
 				choices=listoffields,
 				majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -109,12 +110,13 @@ class CtrlPanel(wx.Panel):
 
 	def on_draw_button(self, event):
 		title = self.p.key.title() + ', t=' + str(self.p.time)
-		quad = ['vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz']
-		if self.p.key in quad:
-			self.p.fig.draw_quad(title,
+#		quad = ['vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz']
+		single = ['Bx','By','Bz','Ex','Ey','Ez']
+		if self.p.key in single:
+			self.p.fig.draw_one(title,
 				self.p.X, self.p.Y, self.p.field[self.p.key])
 		else:
-			self.p.fig.draw_one(title,
+			self.p.fig.draw_quad(title,
 				self.p.X, self.p.Y, self.p.field[self.p.key])
 		
         
