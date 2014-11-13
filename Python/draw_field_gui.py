@@ -56,6 +56,7 @@ class Figure2D(Figure):
 			ax.axis('tight')
 			self.colorbar(pcm)
 			ax.set_title(name+', s='+str(i))
+		self.tight_layout()
 		self.canvas.draw()
 
 	def draw_one(self, name, X, Y, fZ):
@@ -73,6 +74,7 @@ class Figure2D(Figure):
 		ax.axis('tight')
 		self.colorbar(pcm)
 		ax.set_title(name)
+		self.tight_layout()
 
 		self.canvas.draw()
 
@@ -87,6 +89,8 @@ class CtrlPanel(wx.Panel):
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
 
+	# Save a local reference to Main Frame
+	#
 		self.p = parent
 
 		listoffields = ['Bx','By','Bz','Ex','Ey','Ez',
@@ -109,29 +113,25 @@ class CtrlPanel(wx.Panel):
 		self.p.key = self.RB.GetItemLabel(self.RB.GetSelection())
 
 	def on_draw_button(self, event):
-		title = self.p.key.title() + ', t=' + str(self.p.time)
-#		quad = ['vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz']
-		single = ['Bx','By','Bz','Ex','Ey','Ez']
-		if self.p.key in single:
-			self.p.fig.draw_one(title,
-				self.p.X, self.p.Y, self.p.field[self.p.key])
-		else:
-			self.p.fig.draw_quad(title,
-				self.p.X, self.p.Y, self.p.field[self.p.key])
+		self.p.disp_panel.draw()
 		
         
 class DispPanel(wx.Panel):
-	""" Main Panel
-		* mpl navigation toolbar
+	""" Display Panel and PIC data
+		* navigation toolbar
 	"""
+	X = None; Y = None; field = None;
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
 
+	# Save a local reference to Main Frame
+	#
 		self.p = parent
         
-        # Create the mpl Figure and FigCanvas objects. 
-#		self.fig = Figure2D(title)
-		self.canvas = FigCanvas(self, -1, self.p.fig)
+        # Create a Figure and a FigCanvas
+	#
+		self.fig = Figure2D()
+		self.canvas = FigCanvas(self, -1, self.fig)
 
         # Create the navigation toolbar, tied to the canvas
         #
@@ -141,7 +141,24 @@ class DispPanel(wx.Panel):
 		sizer.Add(self.canvas, 1, wx.EXPAND)
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
-        
+       
+	def draw(self):
+		title = self.p.key.title() + ', t=' + str(self.p.time)
+		single = ['Bx','By','Bz','Ex','Ey','Ez']
+		if self.p.key in single:
+			self.fig.draw_one(title, self.X, self.Y,
+				self.field[self.p.key])
+		else:
+			self.fig.draw_quad(title, self.X, self.Y,
+				self.field[self.p.key])
+
+	def update_data(self):
+		f = os.path.join(self.p.dirname, self.p.filename)
+		self.field = PIC.FieldNASA(f, self.p.grid)
+		self.p.status_message("Loaded data from %s" % f)
+		self.X = self.field['xe']
+		self.Y = self.field['ze']
+		 
 
 class MainMenuBar(wx.MenuBar):
 	""" Main menu.
@@ -149,9 +166,12 @@ class MainMenuBar(wx.MenuBar):
 	def __init__(self, parent, *args, **kwargs):
 		wx.MenuBar.__init__(self, *args, **kwargs)
 
+	# Save a local reference to Main Frame
+	#
 		self.p = parent
 
-		# Set up File Menu
+	# Create a File Menu
+	#
 		menu_file = wx.Menu()
 		m_file_open = menu_file.Append(wx.ID_OPEN, 'Open',
 			'Open data file')
@@ -164,30 +184,33 @@ class MainMenuBar(wx.MenuBar):
 		self.Bind(wx.EVT_MENU, self.on_file_exit, m_file_exit)
 		self.Append(menu_file, 'File')
 
-        	# Set up Help Menu
+       	# Create a Help Menu
+	#
 		menu_help = wx.Menu()
 		m_help_about = menu_help.Append(wx.ID_ABOUT, 'About',
 			'About PIC Draw')
 		self.Bind(wx.EVT_MENU, self.on_help_about, m_help_about)
 		self.Append(menu_help, 'Help')
 
+	# Attach the Menu Bar to the Main Frame
+	#
 		parent.SetMenuBar(self)
 
 	def on_file_open(self, event):
+		""" Open a single PIC data file for plotting
+		"""
 		dlg = wx.FileDialog(self, message = 'Open data file',
 			defaultDir = os.getcwd(), style=wx.FD_OPEN)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.p.dirname = dirname = dlg.GetDirectory()
 			self.p.filename = filename = dlg.GetFilename()
-			f = os.path.join(dirname, filename)
-			self.p.field = field = PIC.FieldNASA(f, self.p.grid)
-			self.status_message("Load data from %s" % f)
-			self.p.X = field['xe']
-			self.p.Y = field['ze']
 			self.p.time = int(filename[7:12])
+			self.p.disp_panel.update_data()
 
 	def on_file_save(self, event):
-		file_choices = 'PNG (*.png)|*.png'
+		""" Save current Figure to a PNG file
+		"""
+		file_choices = 'Portable Network Graphics (*.png)|*.png'
         
 		dlg = wx.FileDialog(self, message = 'Save current figure',
 			defaultDir = os.getcwd(), defaultFile = 'plot.png',
@@ -196,42 +219,35 @@ class MainMenuBar(wx.MenuBar):
 		if dlg.ShowModal() == wx.ID_OK:
 			path = dlg.GetPath()
 			self.p.disp_panel.canvas.print_figure(path)
-			self.status_message("Saved to %s" % path)
+			self.p.status_message("Saved to %s" % path)
         
 	def on_file_exit(self, event):
+		""" Close the Main Frame
+		"""
 		self.p.Destroy()
         
 	def on_help_about(self, event):
-		msg = """ PIC Draw uses matplotlib and wxPython:
-		 * matplotlib navigation bar
-		 * File menu
+		msg = """ PIC Draw 0.1
+		* Draw PIC data using matplotlib and wxPython
+		* Copyright (C) 2014 Jian-Ming Tang <jmtang@mailaps.org>
 		"""
 		dlg = wx.MessageDialog(self, msg, "About", wx.OK)
 		dlg.ShowModal()
 		dlg.Destroy()
-    
-	def status_message(self, msg, flash_len_ms=3000):
-		self.p.statusbar.SetStatusText(msg)
-#		self.timeroff = wx.Timer(self)
-#		self.Bind(wx.EVT_TIMER, self.on_status_off, self.timeroff)
-#		self.timeroff.Start(flash_len_ms, oneShot=True)
-    
-	def on_status_off(self, event):
-		self.parent.statusbar.SetStatusText('')
 
 
 class MainFrame(wx.Frame):
-	""" Main window frame and control variables.
+	""" Main Frame and control parameters
+		* Menu Bar at top
+		* Display Panel on the left
+		* Control Panel on the right
+		* Status Bar at bottom 
 	"""
 	dirname = ''
 	filename = ''
 	grid = [1000, 1, 800]
-	field = None
 	time = 0
-	X = []
-	Y = []
 	key = 'Bx'
-	fig = Figure2D()
 
 	def __init__(self, *args, **kwargs):
 		wx.Frame.__init__(self, *args, **kwargs)
@@ -239,14 +255,23 @@ class MainFrame(wx.Frame):
 		MainMenuBar(self)
 		self.disp_panel = DispPanel(self)
 		self.ctrl_panel = CtrlPanel(self)
-		self.statusbar = self.CreateStatusBar()
+		self.status_bar = self.CreateStatusBar()
 
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
 		sizer.Add(self.disp_panel, 1, wx.EXPAND)
 		sizer.Add(self.ctrl_panel, 0)
 		self.SetSizerAndFit(sizer)
 
-
+	def status_message(self, msg, flash_len_ms=3000):
+		""" Display a message in Status Bar
+		"""
+		self.status_bar.SetStatusText(msg)
+#		self.timeroff = wx.Timer(self)
+#		self.Bind(wx.EVT_TIMER, self.on_status_off, self.timeroff)
+#		self.timeroff.Start(flash_len_ms, oneShot=True)
+    
+	def on_status_off(self, event):
+		self.status_bar.SetStatusText('')
 
 
 ### main program ###
