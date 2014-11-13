@@ -118,9 +118,17 @@ class CtrlPanel(wx.Panel):
 
 	# Create a Toggle Button to add magnetic field lines
 	#
-		tb_stream = wx.ToggleButton(self, label='Magnetic Field Lines')
+		tb_stream = wx.ToggleButton(self, label='Magnetic Field Line')
 		tb_stream.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream)
 		tb_stream.SetValue(False)
+
+	# Create a Text Control to modify range
+	#
+		st_range = wx.StaticText(self, label = 'Range:')
+		self.tc_range = wx.TextCtrl(self)
+		sizer_range = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_range.Add(st_range, 0, flags)
+		sizer_range.Add(self.tc_range, 0, flags)
 
 	# Create Buttons for reloading data and redraw
 	#
@@ -137,6 +145,7 @@ class CtrlPanel(wx.Panel):
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(self.rb_fkey, 0, flags, border=10)
 		sizer.Add(sizer_time, 0, flags, border=5)
+		sizer.Add(sizer_range, 0, flags, border=5)
 		sizer.Add(tb_stream, 0, flags, border=5)
 		sizer.Add(sizer_refresh, 0, flags, border=5)
 		self.SetSizerAndFit(sizer)
@@ -160,7 +169,7 @@ class CtrlPanel(wx.Panel):
 		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
 		f = os.path.join(self.p.dirname, self.p.filename)
 		if os.path.isfile(f):
-			self.p.time = time
+			self.p.time = time.lstrip('0')
 			self.p.disp_panel.update_data()
 
 	def on_btn_draw(self, event):
@@ -279,7 +288,7 @@ class MainMenuBar(wx.MenuBar):
 		if dlg.ShowModal() == wx.ID_OK:
 			self.p.dirname = dlg.GetDirectory()
 			self.p.filename = dlg.GetFilename()
-			self.p.time = self.p.filename[7:12]
+			self.p.time = self.p.filename[7:12].lstrip('0')
 			self.p.disp_panel.update_data()
 			self.p.ctrl_panel.tc_time.SetValue(self.p.time)
 
