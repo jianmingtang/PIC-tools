@@ -32,59 +32,66 @@ import PIC
 
 
 class Figure2D(Figure):
-	""" This class draw two types of figures:
-		1. 4 panels with individual species
-		2. 1 panel
+	""" The following draw methods are implemented:
+		* 1 subplot
+		* 4 subplots with individual species
 	"""
 	def __init__(self, *args, **kwargs):
 		Figure.__init__(self, *args, **kwargs)
 
-	def draw_quad(self, name, X, Y, fZ):
-		""" Create a 4-panel figure
-			name: title of the figure
+	def draw_one(self, name, X, Y, fZ, U=None, V=None):
+		""" Draw a single plot
+			name: title of the plot
 			X, Y: 1D axes data
-			fZ: 2D data set (Fortran indexing)
+			fZ: 2D data set (Fortran style index)
 		"""
-# The default ordering for 2D meshgrid is Fortran style
+	# The default ordering for 2D meshgrid is Fortran style
+	#
+		fX, fY = numpy.meshgrid(X, Y)
+		self.clf()
+		self.ax = self.add_subplot(111)
+		self.ax.set_xlabel('X (de)',fontsize=14)
+		self.ax.set_ylabel('Z (de)',fontsize=14)
+		pcm = self.ax.pcolormesh(fX, fY, fZ)
+		self.ax.axis('tight')
+		self.colorbar(pcm)
+		self.ax.set_title(name)
+		if U != None and V != None:
+			self.add_streamline(X, Y, U, V)
+		self.tight_layout()
+		self.canvas.draw()
+
+	def draw_quad(self, name, X, Y, fZ, U=None, V=None):
+		""" Draw 4 subplots
+			name: main title of the plots
+			X, Y: 1D axes data
+			fZ: 2D data set (Fortran style index)
+		"""
+	# The default ordering for 2D meshgrid is Fortran style
+	#
 		fX, fY = numpy.meshgrid(X, Y)
 		self.clf()
 		for i in range(4):
-			ax = self.add_subplot('22'+str(i+1))
-			ax.set_xlabel('X (de)')
-			ax.set_ylabel('Z (de)')
-			pcm = ax.pcolormesh(fX, fY, fZ[i])
-			ax.axis('tight')
+			self.ax = self.add_subplot('22'+str(i+1))
+			self.ax.set_xlabel('X (de)')
+			self.ax.set_ylabel('Z (de)')
+			pcm = self.ax.pcolormesh(fX, fY, fZ[i])
+			self.ax.axis('tight')
 			self.colorbar(pcm)
-			ax.set_title(name+', s='+str(i))
+			self.ax.set_title(name+', s='+str(i))
+			if U != None and V != None:
+				self.add_streamline(X, Y, U, V)
 		self.tight_layout()
 		self.canvas.draw()
 
-	def draw_one(self, name, X, Y, fZ):
-		""" Create a 1-panel figure
-			name: title of the figure
-			X, Y: 1D axes data
-			fZ: 2D data set (Fortran indexing)
-		"""
-		fX, fY = numpy.meshgrid(X, Y)
-		self.clf()
-		ax = self.add_subplot(111)
-		ax.set_xlabel('X (de)',fontsize=14)
-		ax.set_ylabel('Z (de)',fontsize=14)
-		pcm = ax.pcolormesh(fX, fY, fZ)
-		ax.axis('tight')
-		self.colorbar(pcm)
-		ax.set_title(name)
-		self.tight_layout()
-
-		self.canvas.draw()
-
-#	def add_streamline(self, X, Y, U, V):
-#		plt.streamplot(X,Y,U,V,color='k',density=[5,0.7])
+	def add_streamline(self, X, Y, U, V):
+		self.ax.streamplot(X,Y,U,V,color='k',density=[5,0.7])
 
 			
 class CtrlPanel(wx.Panel):
-	""" Main Panel
-		* mpl navigation toolbar
+	""" Control Panel
+		* Radio Box: select a field
+		* Draw Button: redraw figure
 	"""
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
@@ -93,34 +100,38 @@ class CtrlPanel(wx.Panel):
 	#
 		self.p = parent
 
-		listoffields = ['Bx','By','Bz','Ex','Ey','Ez',
-			'vxs','vys','vzs','pxx','pyy','pzz','pxy','pxz','pyz',
-			'dns']
-		self.RB = wx.RadioBox(self, label='Select a field',
-				choices=listoffields,
-				majorDimension=3, style=wx.RA_SPECIFY_COLS)
-		self.RB.Bind(wx.EVT_RADIOBOX, self.on_field_select)
+		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
+				choices = self.p.fieldlist,
+				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
+		self.rb_fkey.Bind(wx.EVT_RADIOBOX, self.on_field_select)
 
-		self.drawbutton = wx.Button(self, label='Draw')
-		self.Bind(wx.EVT_BUTTON, self.on_draw_button, self.drawbutton)
+		self.btn_draw = wx.Button(self, label = 'Draw')
+		self.Bind(wx.EVT_BUTTON, self.on_draw_button, self.btn_draw)
 
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.RB, 0, wx.ALIGN_LEFT|wx.ALL, 10)
-		sizer.Add(self.drawbutton, 0, border=3)
+		sizer.Add(self.rb_fkey, 0, wx.ALIGN_LEFT|wx.ALL, 10)
+		sizer.Add(self.btn_draw, 0, border=3)
 		self.SetSizerAndFit(sizer)
 
 	def on_field_select(self, event):
-		self.p.key = self.RB.GetItemLabel(self.RB.GetSelection())
+		""" Change the field key
+		"""
+		self.p.fkey = self.rb_fkey.GetItemLabel(
+				self.rb_fkey.GetSelection())
 
 	def on_draw_button(self, event):
+		""" Redraw the figure
+		"""
 		self.p.disp_panel.draw()
 		
         
 class DispPanel(wx.Panel):
 	""" Display Panel and PIC data
-		* navigation toolbar
+		* Figure Canvas
+		* Navigation Toolbar
 	"""
-	X = None; Y = None; field = None;
+	X = None; Y = None; field = None
+
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
 
@@ -143,14 +154,15 @@ class DispPanel(wx.Panel):
 		self.SetSizerAndFit(sizer)
        
 	def draw(self):
-		title = self.p.key.title() + ', t=' + str(self.p.time)
-		single = ['Bx','By','Bz','Ex','Ey','Ez']
-		if self.p.key in single:
+		title = self.p.fkey.title()+', t='+str(self.p.time)
+		if self.p.fkey in self.p.singlelist:
 			self.fig.draw_one(title, self.X, self.Y,
-				self.field[self.p.key])
+				self.field[self.p.fkey],
+				self.field['Bx'],self.field['Bz'])
 		else:
 			self.fig.draw_quad(title, self.X, self.Y,
-				self.field[self.p.key])
+				self.field[self.p.fkey],
+				self.field['Bx'],self.field['Bz'])
 
 	def update_data(self):
 		f = os.path.join(self.p.dirname, self.p.filename)
@@ -161,9 +173,13 @@ class DispPanel(wx.Panel):
 		 
 
 class MainMenuBar(wx.MenuBar):
-	""" Main menu.
+	""" Main Menu Bar
+		* File Menu
+		* Help Menu
 	"""
 	def __init__(self, parent, *args, **kwargs):
+		""" Create the Main Menu Bar
+		"""
 		wx.MenuBar.__init__(self, *args, **kwargs)
 
 	# Save a local reference to Main Frame
@@ -174,10 +190,10 @@ class MainMenuBar(wx.MenuBar):
 	#
 		menu_file = wx.Menu()
 		m_file_open = menu_file.Append(wx.ID_OPEN, 'Open',
-			'Open data file')
+			'Open a PIC data file')
 		self.Bind(wx.EVT_MENU, self.on_file_open, m_file_open)
 		m_file_save = menu_file.Append(wx.ID_SAVE, 'Save',
-			'Save figure to file')
+			'Save the figure to a PNG file')
 		self.Bind(wx.EVT_MENU, self.on_file_save, m_file_save)
 		menu_file.AppendSeparator()
 		m_file_exit = menu_file.Append(wx.ID_EXIT, 'Quit')
@@ -199,8 +215,8 @@ class MainMenuBar(wx.MenuBar):
 	def on_file_open(self, event):
 		""" Open a single PIC data file for plotting
 		"""
-		dlg = wx.FileDialog(self, message = 'Open data file',
-			defaultDir = os.getcwd(), style=wx.FD_OPEN)
+		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
+				style = wx.FD_OPEN)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.p.dirname = dirname = dlg.GetDirectory()
 			self.p.filename = filename = dlg.GetFilename()
@@ -208,13 +224,14 @@ class MainMenuBar(wx.MenuBar):
 			self.p.disp_panel.update_data()
 
 	def on_file_save(self, event):
-		""" Save current Figure to a PNG file
+		""" Save the current Figure to a PNG file
 		"""
-		file_choices = 'Portable Network Graphics (*.png)|*.png'
+		ffilter = 'Portable Network Graphics (*.png)|*.png'
+		fname = self.p.fkey.title()+'_t'+str(self.p.time)
         
-		dlg = wx.FileDialog(self, message = 'Save current figure',
-			defaultDir = os.getcwd(), defaultFile = 'plot.png',
-			wildcard = file_choices, style = wx.FD_SAVE)
+		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
+				defaultFile = fname, wildcard = ffilter,
+				style = wx.FD_SAVE)
         
 		if dlg.ShowModal() == wx.ID_OK:
 			path = dlg.GetPath()
@@ -228,9 +245,9 @@ class MainMenuBar(wx.MenuBar):
         
 	def on_help_about(self, event):
 		msg = """ PIC Draw 0.1
-		* Draw PIC data using matplotlib and wxPython
-		* Copyright (C) 2014 Jian-Ming Tang <jmtang@mailaps.org>
-		"""
+* Draw PIC data using matplotlib and wxPython
+* Copyright (C) 2014 Jian-Ming Tang <jmtang@mailaps.org>
+"""
 		dlg = wx.MessageDialog(self, msg, "About", wx.OK)
 		dlg.ShowModal()
 		dlg.Destroy()
@@ -247,14 +264,30 @@ class MainFrame(wx.Frame):
 	filename = ''
 	grid = [1000, 1, 800]
 	time = 0
-	key = 'Bx'
+	fkey = 'Bx'
+	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
+		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
+	singlelist = fieldlist[:6]
 
 	def __init__(self, *args, **kwargs):
+		""" Create the Main Frame
+		"""
 		wx.Frame.__init__(self, *args, **kwargs)
 
+	# Create the Main Menu Bar
+	#
 		MainMenuBar(self)
+
+	# Create a Display Panel
+	#
 		self.disp_panel = DispPanel(self)
+
+	# Create a Control Panel
+	#
 		self.ctrl_panel = CtrlPanel(self)
+
+	# Create the Status Bar
+	#
 		self.status_bar = self.CreateStatusBar()
 
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -262,17 +295,11 @@ class MainFrame(wx.Frame):
 		sizer.Add(self.ctrl_panel, 0)
 		self.SetSizerAndFit(sizer)
 
-	def status_message(self, msg, flash_len_ms=3000):
+	def status_message(self, msg):
 		""" Display a message in Status Bar
 		"""
 		self.status_bar.SetStatusText(msg)
-#		self.timeroff = wx.Timer(self)
-#		self.Bind(wx.EVT_TIMER, self.on_status_off, self.timeroff)
-#		self.timeroff.Start(flash_len_ms, oneShot=True)
     
-	def on_status_off(self, event):
-		self.status_bar.SetStatusText('')
-
 
 ### main program ###
 if __name__ == "__main__": 
