@@ -21,6 +21,10 @@ class FieldNASA:
 	"""
 	This class is used to store data in ndarray from NASA PIC data files.
 	"""
+	quadlist = ['vxs','vys','vzs',
+		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
+	singlelist = ['Bx','By','Bz','Ex','Ey','Ez']
+	data_t = {}
 	def __init__(self, fname, grid, nss=4):
 		"""
 		fname: data filename
@@ -60,6 +64,17 @@ class FieldNASA:
 			('pad2','i4')
 			])
 		self.data = numpy.fromfile(fname, datatype)[0]
+		self.truncate([0,nx,0,nz])
 
 	def __getitem__(self, key):
-		return self.data[key]
+		return self.data_t[key]
+
+	def truncate(self, r):
+		""" We do basic slicing here, so that no new copies
+		"""
+		for k in self.singlelist:
+			self.data_t[k] = self.data[k][r[2]:r[3],r[0]:r[1]]
+		for k in self.quadlist:
+			self.data_t[k] = self.data[k][:,r[2]:r[3],r[0]:r[1]]
+		self.data_t['xe'] = self.data['xe'][r[0]:r[1]]
+		self.data_t['ze'] = self.data['ze'][r[2]:r[3]]

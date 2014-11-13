@@ -107,7 +107,7 @@ class CtrlPanel(wx.Panel):
 				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
 		self.rb_fkey.Bind(wx.EVT_RADIOBOX, self.on_rb_field)
 
-		flags = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER
+		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
 	# Create a Text Control to modify time
 	#
 		st_time = wx.StaticText(self, label = 'Time:')
@@ -124,11 +124,19 @@ class CtrlPanel(wx.Panel):
 
 	# Create a Text Control to modify range
 	#
-		st_range = wx.StaticText(self, label = 'Range:')
-		self.tc_range = wx.TextCtrl(self)
-		sizer_range = wx.BoxSizer(wx.HORIZONTAL)
-		sizer_range.Add(st_range, 0, flags)
-		sizer_range.Add(self.tc_range, 0, flags)
+		st_range_label = wx.StaticText(self, label = 'Drawing Range:')
+		st_range = [ wx.StaticText(self, label = i) \
+			for i in ['xmin:','xmax:','zmin:','zmax:']]
+		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
+			for i in range(4)]
+		self.tc_range[0].SetRange(0, self.p.grid[0])
+		self.tc_range[1].SetRange(0, self.p.grid[0])
+		self.tc_range[2].SetRange(0, self.p.grid[2])
+		self.tc_range[3].SetRange(0, self.p.grid[2])
+		sizer_range = wx.GridSizer(rows=4, cols=2)
+		for i in range(4):
+			sizer_range.Add(st_range[i], 0, flags)
+			sizer_range.Add(self.tc_range[i], 0, flags)
 
 	# Create Buttons for reloading data and redraw
 	#
@@ -142,12 +150,16 @@ class CtrlPanel(wx.Panel):
 
 	# Sizer and Fit
 	#
+		pad = 3
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.rb_fkey, 0, flags, border=10)
-		sizer.Add(sizer_time, 0, flags, border=5)
-		sizer.Add(sizer_range, 0, flags, border=5)
-		sizer.Add(tb_stream, 0, flags, border=5)
-		sizer.Add(sizer_refresh, 0, flags, border=5)
+		sizer.Add(self.rb_fkey, 0, flags, pad)
+		sizer.Add(sizer_time, 0, flags, pad)
+		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
+		sizer.Add(st_range_label, 0, flags)
+		sizer.Add(sizer_range, 0, flags, pad)
+		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
+		sizer.Add(tb_stream, 0, flags, pad)
+		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
 
 	def on_rb_field(self, event):
@@ -175,8 +187,11 @@ class CtrlPanel(wx.Panel):
 	def on_btn_draw(self, event):
 		""" Redraw the figure
 		"""
+		r = [self.tc_range[i].GetValue() for i in range(4)]
+		if r[0] >= r[1] or r[2] >= r[3]:
+			r = None
 		if self.p.disp_panel.field:
-			self.p.disp_panel.draw()
+			self.p.disp_panel.draw(r)
 		else:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
 					'Error', wx.ICON_ERROR)
@@ -215,8 +230,12 @@ class DispPanel(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self):
+	def draw(self, r=None):
 		title = self.p.fkey.title()+', t='+str(self.p.time)
+		if r:
+			self.field.truncate(r)
+			self.X = self.field['xe']
+			self.Y = self.field['ze']
 		self.p.status_message('Drawing')
 		if self.p.streamline:
 			U = self.field['Bx']	
