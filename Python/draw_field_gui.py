@@ -100,29 +100,80 @@ class CtrlPanel(wx.Panel):
 	#
 		self.p = parent
 
+	# Create a Radio Box for field keys
+	#
 		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
 				choices = self.p.fieldlist,
 				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
-		self.rb_fkey.Bind(wx.EVT_RADIOBOX, self.on_field_select)
+		self.rb_fkey.Bind(wx.EVT_RADIOBOX, self.on_rb_field)
 
-		self.btn_draw = wx.Button(self, label = 'Draw')
-		self.Bind(wx.EVT_BUTTON, self.on_draw_button, self.btn_draw)
+		flags = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER
+	# Create a Text Control to modify time
+	#
+		st_time = wx.StaticText(self, label = 'Time:')
+		self.tc_time = wx.TextCtrl(self)
+		sizer_time = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_time.Add(st_time, 0, flags)
+		sizer_time.Add(self.tc_time, 0, flags)
 
+	# Create a Toggle Button to add magnetic field lines
+	#
+		tb_stream = wx.ToggleButton(self, label='Magnetic Field Lines')
+		tb_stream.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream)
+		tb_stream.SetValue(False)
+
+	# Create Buttons for reloading data and redraw
+	#
+		btn_load = wx.Button(self, label = 'Reload')
+		btn_load.Bind(wx.EVT_BUTTON, self.on_btn_load)
+		btn_draw = wx.Button(self, label = 'Redraw')
+		btn_draw.Bind(wx.EVT_BUTTON, self.on_btn_draw)
+		sizer_refresh = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_refresh.Add(btn_load, 0, flags)
+		sizer_refresh.Add(btn_draw, 0, flags)
+
+	# Sizer and Fit
+	#
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.rb_fkey, 0, wx.ALIGN_LEFT|wx.ALL, 10)
-		sizer.Add(self.btn_draw, 0, border=3)
+		sizer.Add(self.rb_fkey, 0, flags, border=10)
+		sizer.Add(sizer_time, 0, flags, border=5)
+		sizer.Add(tb_stream, 0, flags, border=5)
+		sizer.Add(sizer_refresh, 0, flags, border=5)
 		self.SetSizerAndFit(sizer)
 
-	def on_field_select(self, event):
+	def on_rb_field(self, event):
 		""" Change the field key
 		"""
 		self.p.fkey = self.rb_fkey.GetItemLabel(
 				self.rb_fkey.GetSelection())
 
-	def on_draw_button(self, event):
+	def on_tb_stream(self, event):
+		""" Toggle stream lines
+		"""
+		self.p.streamline = not self.p.streamline
+		self.p.disp_panel.draw()
+
+	def on_btn_load(self, event):
+		""" Reload the data
+		"""
+		time = self.tc_time.GetValue()
+		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
+		f = os.path.join(self.p.dirname, self.p.filename)
+		if os.path.isfile(f):
+			self.p.time = time
+			self.p.disp_panel.update_data()
+
+	def on_btn_draw(self, event):
 		""" Redraw the figure
 		"""
-		self.p.disp_panel.draw()
+		if self.p.disp_panel.field:
+			self.p.disp_panel.draw()
+		else:
+			dlg = wx.MessageDialog(self, 'Load Data First!',
+					'Error', wx.ICON_ERROR)
+			dlg.ShowModal()
+			dlg.Destroy()
+			
 		
         
 class DispPanel(wx.Panel):
@@ -148,6 +199,8 @@ class DispPanel(wx.Panel):
         #
 		self.toolbar = NavigationToolbar(self.canvas)
 
+	# Sizer and Fit
+	#
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(self.canvas, 1, wx.EXPAND)
 		sizer.Add(self.toolbar, 0)
@@ -155,19 +208,25 @@ class DispPanel(wx.Panel):
        
 	def draw(self):
 		title = self.p.fkey.title()+', t='+str(self.p.time)
+		self.p.status_message('Drawing')
+		if self.p.streamline:
+			U = self.field['Bx']	
+			V = self.field['Bz']
+		else:
+			U = V = None	
 		if self.p.fkey in self.p.singlelist:
 			self.fig.draw_one(title, self.X, self.Y,
-				self.field[self.p.fkey],
-				self.field['Bx'],self.field['Bz'])
+				self.field[self.p.fkey], U, V)
 		else:
 			self.fig.draw_quad(title, self.X, self.Y,
-				self.field[self.p.fkey],
-				self.field['Bx'],self.field['Bz'])
+				self.field[self.p.fkey], U, V)
+		self.p.status_message('Done')
 
 	def update_data(self):
 		f = os.path.join(self.p.dirname, self.p.filename)
+		self.p.status_message('Loading')
 		self.field = PIC.FieldNASA(f, self.p.grid)
-		self.p.status_message("Loaded data from %s" % f)
+		self.p.status_message('Loaded data from %s' % f)
 		self.X = self.field['xe']
 		self.Y = self.field['ze']
 		 
@@ -218,10 +277,11 @@ class MainMenuBar(wx.MenuBar):
 		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
 				style = wx.FD_OPEN)
 		if dlg.ShowModal() == wx.ID_OK:
-			self.p.dirname = dirname = dlg.GetDirectory()
-			self.p.filename = filename = dlg.GetFilename()
-			self.p.time = int(filename[7:12])
+			self.p.dirname = dlg.GetDirectory()
+			self.p.filename = dlg.GetFilename()
+			self.p.time = self.p.filename[7:12]
 			self.p.disp_panel.update_data()
+			self.p.ctrl_panel.tc_time.SetValue(self.p.time)
 
 	def on_file_save(self, event):
 		""" Save the current Figure to a PNG file
@@ -248,7 +308,7 @@ class MainMenuBar(wx.MenuBar):
 * Draw PIC data using matplotlib and wxPython
 * Copyright (C) 2014 Jian-Ming Tang <jmtang@mailaps.org>
 """
-		dlg = wx.MessageDialog(self, msg, "About", wx.OK)
+		dlg = wx.MessageDialog(self, msg, 'About', wx.OK)
 		dlg.ShowModal()
 		dlg.Destroy()
 
@@ -263,11 +323,12 @@ class MainFrame(wx.Frame):
 	dirname = ''
 	filename = ''
 	grid = [1000, 1, 800]
-	time = 0
+	time = ''
 	fkey = 'Bx'
 	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
 		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
 	singlelist = fieldlist[:6]
+	streamline = False
 
 	def __init__(self, *args, **kwargs):
 		""" Create the Main Frame
@@ -290,6 +351,8 @@ class MainFrame(wx.Frame):
 	#
 		self.status_bar = self.CreateStatusBar()
 
+	# Sizer and Fit
+	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
 		sizer.Add(self.disp_panel, 1, wx.EXPAND)
 		sizer.Add(self.ctrl_panel, 0)
