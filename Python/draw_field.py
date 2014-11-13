@@ -21,7 +21,6 @@
 
 
 import struct
-import thread
 import numpy
 import PIC
 import Figure
