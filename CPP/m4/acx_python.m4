@@ -18,7 +18,7 @@ AC_CHECK_HEADER(numpy/arrayobject.h, numpy=yes, numpy=no,
 if test $pylib = yes && test $pyinc = yes && test $numpy = yes; then
 	AC_DEFINE(HAVE_PYTHON, 1,
 		"Define to 1 if you have required Python files")
-	CXXFLAGS+=" -I/usr/include/python$PYTHON_VERSION"
+	CPPFLAGS+=" -I/usr/include/python$PYTHON_VERSION"
 	LIBS+=" -lpython$PYTHON_VERSION"
 fi
 ]) dnl ACX_PYTHON
