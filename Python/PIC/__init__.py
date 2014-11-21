@@ -1,5 +1,4 @@
-"""
-PIC data classes
+""" PIC data classes
 """
 
 from DistNASA import *

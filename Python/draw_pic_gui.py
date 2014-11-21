@@ -154,7 +154,7 @@ class F1DCtrlPanel(wx.Panel):
 	#
 		self.slr_cut = wx.Slider(self, value = self.p.cut,
 				size = (150,-1), minValue = 0,
-				style = wx.SL_LABELS)
+				style = wx.SL_HORIZONTAL | wx.SL_LABELS)
 		self.slr_cut.Bind(wx.EVT_SCROLL,
 				self.on_slr_cut)
 
