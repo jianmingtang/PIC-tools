@@ -21,50 +21,246 @@
 
 import os
 import wx
+from wx.lib.pubsub import pub
 import PIC
 import GUI
 
 
-class MainMenuBar(wx.MenuBar):
-	""" Main Menu Bar
-		* File Menu
-		* Help Menu
+class PanelF2D(wx.Panel):
+	""" F2D Panel (Controller)
 	"""
+# control variables
+#
+	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
+		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
+	singlelist = fieldlist[:6]
+	fkey = fieldlist[0]
+	streamline = False
+
 	def __init__(self, parent, *args, **kwargs):
-		""" Create the Main Menu Bar
-		"""
-		wx.MenuBar.__init__(self, *args, **kwargs)
+		wx.Panel.__init__(self, parent, *args, **kwargs)
 
 	# Save a local reference to Main Frame
 	#
 		self.p = parent
 
+		self.ctrlF2D = GUI.PanelF2DCtrl(self)
+		self.dispF2D = GUI.PanelF2DDisp(self)
+
+		sizer = wx.BoxSizer(wx.HORIZONTAL)
+		sizer.Add(self.dispF2D, 1, wx.EXPAND)
+		sizer.Add(self.ctrlF2D, 0)
+		self.SetSizerAndFit(sizer)
+
+		self.ctrlF2D.tb_stream.SetValue(False)
+		
+		if self.p.dirname and self.p.filename:
+			self.update_data()
+
+		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
+				self.ctrlF2D.rb_fkey)
+		self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream,
+				self.ctrlF2D.tb_stream)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
+				self.ctrlF2D.btn_load)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
+				self.ctrlF2D.btn_draw)
+
+	def update_data(self):
+		f = os.path.join(self.p.dirname, self.p.filename)
+		try:
+			self.field = PIC.FieldNASA(f)
+		except:
+			self.p.status_message('Fail')
+			self.field = None
+		self.p.status_message(f)
+		if self.field:
+			self.time = self.p.filename[7:12].lstrip('0')
+			self.ctrlF2D.tc_time.SetValue(self.time)
+			self.set_range()
+
+	def set_range(self):
+		nx = self.field.data['nnx']
+		nz = self.field.data['nnz']
+		self.ctrlF2D.tc_range[0].SetRange(0, nx)
+		self.ctrlF2D.tc_range[1].SetRange(0, nx)
+		self.ctrlF2D.tc_range[1].SetValue(nx)
+		self.ctrlF2D.tc_range[2].SetRange(0, nz)
+		self.ctrlF2D.tc_range[3].SetRange(0, nz)
+		self.ctrlF2D.tc_range[3].SetValue(nz)
+
+	def on_rb_fkey(self, event):
+		""" Change the field key
+		"""
+		self.fkey = self.ctrlF2D.rb_fkey.GetItemLabel(
+				self.ctrlF2D.rb_fkey.GetSelection())
+
+	def on_tb_stream(self, event):
+		""" Toggle stream lines
+		"""
+		self.streamline = not self.streamline
+		self.dispF2D.draw()
+
+	def on_btn_load(self, event):
+		""" Reload the data
+		"""
+		time = self.ctrlF2D.tc_time.GetValue()
+		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
+		ret = self.update_data()
+		if ret:
+			self.p.status_message('Loaded ' + self.p.filename)
+
+	def on_btn_draw(self, event):
+		""" Redraw the figure
+		"""
+		r = [self.ctrlF2D.tc_range[i].GetValue() for i in range(4)]
+		if r[0] >= r[1] or r[2] >= r[3]:
+			r = None
+		if self.field:
+			self.dispF2D.draw(r)
+		else:
+			dlg = wx.MessageDialog(self, 'Load Data First!',
+					'Error', wx.ICON_ERROR)
+			dlg.ShowModal()
+			dlg.Destroy()
+
+
+class FrameF2D(wx.Frame):
+	""" Frame for field plots in 2D
+		* Menu Bar at top
+		* Display Panel on the left
+		* Control Panel on the right
+		* Status Bar at bottom 
+	"""
+	streamline = False
+	X = None; Y = None
+
+	def __init__(self, parent, *args, **kwargs):
+		""" Create the F2D Frame
+		"""
+		wx.Frame.__init__(self, parent, *args, **kwargs)
+
+	# Save a local reference to the Main Frame
+	#
+		self.p = parent
+        
+	# Create a Control Panel
+	#
+		self.ctrl_panel = PanelF2DCtrl(self)
+
+	# Create a Display Panel
+	#
+		self.disp_panel = PanelF2DDisp(self)
+
+	# Create the Status Bar
+	#
+		self.status_bar = self.CreateStatusBar()
+		self.status_message('Loaded ' + self.p.filename)
+
+	# Sizer and Fit
+	#
+		sizer = wx.BoxSizer(wx.HORIZONTAL)
+		sizer.Add(self.disp_panel, 1, wx.EXPAND)
+		sizer.Add(self.ctrl_panel, 0)
+		self.SetSizerAndFit(sizer)
+
+	def status_message(self, msg):
+		""" Display a message in Status Bar
+		"""
+		self.status_bar.SetStatusText(msg)
+
+
+class PanelD3D(wx.Panel):
+	""" D3D Panel (Controller)
+	"""
+# control variables
+#
+	def __init__(self, parent, *args, **kwargs):
+		wx.Panel.__init__(self, parent, *args, **kwargs)
+
+	# Save a local reference to Main Frame
+	#
+		self.p = parent
+
+#		ctrl_panel = GUI.PanelD3DCtrl(self)
+#		disp_panel = GUI.PanelD3DDisp(self)
+
+		sizer = wx.BoxSizer(wx.HORIZONTAL)
+#		sizer.Add(disp_panel, 1, wx.EXPAND)
+#		sizer.Add(ctrl_panel, 0)
+		self.SetSizerAndFit(sizer)
+		self.p.Fit()
+
+
+class PanelBackground(wx.Panel):
+	"""  Panel with a background image
+	"""
+	def __init__(self, *args, **kwargs):
+		wx.Panel.__init__(self, *args, **kwargs)
+
+	# Add the backgroud image
+	#
+		image = wx.StaticBitmap(self, bitmap = wx.BitmapFromImage(
+			wx.Image('draw_pic.png', wx.BITMAP_TYPE_PNG)))
+
+		sizer = wx.GridSizer()
+		sizer.Add(image, 0, wx.ALIGN_CENTER)
+		self.SetSizer(sizer)		
+
+
+class MainMenuBar(wx.MenuBar):
+	""" Main Menu Bar
+		* File Menu
+		* Window Menu
+		* Help Menu
+	"""
+	labelF2D = 'Field 2D Plot'
+	labelF1D = 'Field 1D Plot'
+	labelD3D = 'Distribution 3D Plot'
+	labelD2D = 'Distribution 2D Plot'
+
+	def __init__(self, *args, **kwargs):
+		""" Create the Main Menu Bar
+		"""
+		wx.MenuBar.__init__(self,  *args, **kwargs)
+
 	# Create a File Menu
 	#
 		menu_file = wx.Menu()
-		m_file_exit = menu_file.Append(wx.ID_EXIT, 'Quit')
-		self.Bind(wx.EVT_MENU, self.on_file_exit, m_file_exit)
+		self.file_new = menu_file.Append(wx.ID_NEW, 'New',
+			'Open a new window')
+		self.file_open = menu_file.Append(wx.ID_OPEN, 'Open',
+			'Open a PIC data file')
+		self.file_save = menu_file.Append(wx.ID_SAVE, 'Save',
+			'Save the figure to a PNG file')
+		self.file_save.Enable(False)
+		menu_file.AppendSeparator()
+		self.file_exit = menu_file.Append(wx.ID_EXIT, 'Quit')
 		self.Append(menu_file, 'File')
+
+	# Create a Window Menu
+	#
+		menu_frame = wx.Menu()
+		self.frame_F2D = menu_frame.Append(wx.ID_ANY, self.labelF2D,
+			'Open a Frame for 2D field plot')
+		self.frame_F1D = menu_frame.Append(wx.ID_ANY, self.labelF1D,
+			'Open a Frame for 1D field plot')
+		self.frame_F1D.Enable(False)
+		self.frame_D3D = menu_frame.Append(wx.ID_ANY, self.labelD3D,
+			'Open a Frame for 3D distribution plot')
+		self.frame_D2D = menu_frame.Append(wx.ID_ANY, self.labelD2D,
+			'Open a Frame for 2D distribution plot')
+		self.frame_D2D.Enable(False)
+		self.Append(menu_frame, 'Window')
 
        	# Create a Help Menu
 	#
 		menu_help = wx.Menu()
-		m_help_about = menu_help.Append(wx.ID_ABOUT, 'About',
+		help_about = menu_help.Append(wx.ID_ABOUT, 'About',
 			'About PIC Draw')
-		self.Bind(wx.EVT_MENU, self.on_help_about, m_help_about)
+		self.Bind(wx.EVT_MENU, self.on_help_about, help_about)
 		self.Append(menu_help, 'Help')
 
-	# Attach the Menu Bar to the Main Frame
-	#
-		parent.SetMenuBar(self)
-
-	def on_file_exit(self, event):
-		""" Close the Main Frame
-		"""
-#		if self.p.frame_F1D:  self.p.frame_F1D.Destroy()
-#		if self.p.frame_D3D:  self.p.frame_D3D.Destroy()
-		self.p.Destroy()
-       
 	def on_help_about(self, event):
 		msg = """ PIC Draw 0.2
 * Draw PIC data using matplotlib and wxPython
@@ -75,55 +271,27 @@ class MainMenuBar(wx.MenuBar):
 
 
 class MainFrame(wx.Frame):
-	""" Main Frame
-		* Selections of next-level Frames
+	""" Main Frame (Controller)
+		* MenuBar
+		* Panel (Background/F2D/D3D)
+		* StatusBar
 	"""
-# data variables
-#
-	field = None
-	dist = None
-
-# control variables
-#
 	dirname = ''
 	filename = ''
-	time = 0
-	fkey = 'Bx'
-	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
-		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
-	singlelist = fieldlist[:6]
-
-# GUI variables
-#
-	frameF2D = None
-	frameF1D = None
-	frameD3D = None
-	frameD2D = None
-
-	labelF2D = 'Field 2D Plot'
-	labelF1D = 'Field 1D Plot'
-	labelD3D = 'Distribution 3D Plot'
-	labelD2D = 'Distribution 2D Plot'
 
 	def __init__(self, *args, **kwargs):
-		""" Create the Main Frame with MainMenuBar/Buttons/StatusBar
+		""" Create the Main Frame with MainMenuBar/Panel/StatusBar
 		"""
 		wx.Frame.__init__(self, *args, **kwargs)
 
 	# Add the Main Menu Bar
 	#
-		MainMenuBar(self)
+		self.menu = MainMenuBar()
+		self.SetMenuBar(self.menu)
 
-	# Add Buttons for child Frames
+	# Add a backgroud image
 	#
-		btn_F2D = wx.Button(self, label = self.labelF2D)
-		btn_F2D.Bind(wx.EVT_BUTTON, self.on_btn_F2D)
-		btn_F1D = wx.Button(self, label = self.labelF1D)
-		btn_F1D.Bind(wx.EVT_BUTTON, self.on_btn_F1D)
-		btn_D3D = wx.Button(self, label = self.labelD3D)
-		btn_D3D.Bind(wx.EVT_BUTTON, self.on_btn_D3D)
-		btn_D2D = wx.Button(self, label = self.labelD2D)
-		btn_D2D.Bind(wx.EVT_BUTTON, self.on_btn_D2D)
+		self.panel = PanelBackground(self)
 
 	# Add the Status Bar
 	#
@@ -131,95 +299,124 @@ class MainFrame(wx.Frame):
 
 	# Sizer and Fit
 	#
-		pad = 2
-		flags = wx.EXPAND | wx.ALL 
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(btn_F2D, 100, flags, pad)
-		sizer.Add(btn_F1D, 100, flags, pad)
-		sizer.Add(btn_D3D, 100, flags, pad)
-		sizer.Add(btn_D2D, 100, flags, pad)
+		sizer.Add(self.panel, 100, wx.EXPAND)
 		self.SetSizerAndFit(sizer)
+
+	# Bind to menu events
+	#
+		self.Bind(wx.EVT_MENU, self.on_file_new, self.menu.file_new)
+		self.Bind(wx.EVT_MENU, self.on_file_open, self.menu.file_open)
+		self.Bind(wx.EVT_MENU, self.on_file_save, self.menu.file_save)
+		self.Bind(wx.EVT_MENU, self.on_file_exit, self.menu.file_exit)
+		self.Bind(wx.EVT_MENU, self.on_frame_F2D, self.menu.frame_F2D)
+		self.Bind(wx.EVT_MENU, self.on_frame_F1D, self.menu.frame_F1D)
+		self.Bind(wx.EVT_MENU, self.on_frame_D3D, self.menu.frame_D3D)
+		self.Bind(wx.EVT_MENU, self.on_frame_D2D, self.menu.frame_D2D)
 
 	def status_message(self, msg):
 		""" Display a message in the Status Bar
 		"""
 		self.status_bar.SetStatusText(msg)
-
-	def open_data_file(self):
-		""" Choose a PIC data file for plotting
-		"""
-		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
-				style = wx.FD_OPEN)
-		if dlg.ShowModal() == wx.ID_OK:
-			self.dirname = dlg.GetDirectory()
-			self.filename = dlg.GetFilename()
-
+ 
 	def file_not_found(self):
-		""" if file not found
+		""" file not found
 		"""
 		dlg = wx.MessageDialog(self, 'File not found!',
 				'Error', wx.ICON_ERROR)
 		dlg.ShowModal()
 		dlg.Destroy()
 
-	def update_field_data(self):
-		if self.dirname and self.filename:
+	def renew_panel(self, panel):
+		""" replace the background image with dist/ctrl panels
+		"""
+		self.panel.Destroy()
+		self.panel = panel
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer.Add(self.panel, 100, wx.EXPAND)
+		self.SetSizerAndFit(sizer)
+
+	def on_file_new(self, event):
+		""" Open a new root Frame
+		"""
+		frame = MainFrame(None, title='PIC Draw')
+		frame.Show()
+
+	def on_file_open(self, event):
+		""" Choose a PIC data file
+		"""
+		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
+				style = wx.FD_OPEN)
+		if dlg.ShowModal() == wx.ID_OK:
+			self.dirname = dlg.GetDirectory()
+			self.filename = dlg.GetFilename()
 			f = os.path.join(self.dirname, self.filename)
-		else:
-			f = ''
-		if os.path.isfile(f):
-			self.field = PIC.FieldNASA(f)
-			self.time = self.filename[7:12].lstrip('0')
-		else:
-#			self.status_message('File not found!')
-			self.file_not_found()
-			f = ''
-		return f
+			if not os.path.isfile(f):
+				self.dirname = ''
+				self.filename = ''
+				self.file_not_found()
 
-	def on_btn_F2D(self, event):
-		""" Open Field 2D Frame
+	def on_file_save(self, event):
+		""" Save the current Figure to a PNG file
 		"""
-		self.open_data_file()
-		self.update_field_data()
-		if self.field and self.frameF2D == None:
-			self.frameF2D = GUI.FrameF2D(self,
-					title = self.labelF2D)
-			self.frameF2D.Show()
+		ffilter = 'Portable Network Graphics (*.png)|*.png'
+		fname = self.fkey.title()+'_t'+str(self.time)
 
-	def on_btn_F1D(self, event):
-		""" Open Field 1D Frame
-		"""
-		if self.field and self.frameF1D == None:
-			self.frameF1D = GUI.FrameF1D(self,
-					title = self.labelF1D)
-			self.frameF1D.Show()
+		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
+				defaultFile = fname, wildcard = ffilter,
+				style = wx.FD_SAVE)
 
-	def on_btn_D3D(self, event):
-		""" Open Distribution 3D Frame
-		"""
-		f = self.open_data_file()
-		if os.path.isfile(f):
-			self.dist = PIC.DistNASA(f)
-			if self.frameD3D == None:
-				self.frameD3D = GUI.FrameD3D(self,
-						title = self.labelD3D)
-				self.frameD3D.Show()
-		else:
-			self.file_not_found()
+		if dlg.ShowModal() == wx.ID_OK:
+			path = dlg.GetPath()
+			self.disp_panel.canvas.print_figure(path)
+			self.status_message("Saved to %s" % path)
 
-	def on_btn_D2D(self, event):
-		""" Open Distribution 2D Frame
+	def on_file_exit(self, event):
+		""" Close a root Frame
 		"""
-		if self.dist and self.frameD2D == None:
-			self.frameD2D = GUI.FrameD2D(self,
-					title = self.labelD2D)
-			self.frameD2D.Show()
-		
+		self.Destroy()
+
+	def on_frame_F2D(self, event):
+		self.renew_panel(PanelF2D(self))
+		self.SetTitle(self.menu.labelF2D)
+		self.menu.frame_F2D.Enable(False)
+		self.menu.frame_F1D.Enable(True)
+		self.menu.frame_D3D.Enable(True)
+		self.menu.frame_D2D.Enable(False)
+		if not (self.dirname or self.filename):
+			self.on_file_open(None)
+		self.panel.update_data()
+
+	def on_frame_F1D(self, event):
+		frame = GUI.FrameF1D(self.panel, title = self.menu.labelF1D)
+		frame.Show()
+
+	def on_frame_D3D(self, event):
+		self.renew_panel(PanelD3D(self))
+		self.SetTitle(self.menu.labelD3D)
+		self.menu.frame_F2D.Enable(True)
+		self.menu.frame_F1D.Enable(False)
+		self.menu.frame_D3D.Enable(False)
+		self.menu.frame_D2D.Enable(True)
+		if not (self.dirname or self.filename):
+			self.on_file_open(None)
+
+	def on_frame_D2D(self, event):
+		frame = GUI.FrameD2D(self.panel, title = self.menu.labelD2D)
+		frame.Show()
+
+
+class myApp(wx.App):
+	def OnInit(self):
+		frame = MainFrame(None, title='PIC Draw')
+#		frame.CenterOnScreen()
+#		self.SetTopWindow(frame)
+		frame.Show()
+		return True
+
 
 ### main program ###
 if __name__ == "__main__": 
 
-	app = wx.App()
-	frame = MainFrame(None, title='PIC Draw')
-	frame.Show()
+	app = myApp()
 	app.MainLoop()

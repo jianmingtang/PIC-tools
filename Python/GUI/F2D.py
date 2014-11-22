@@ -112,24 +112,24 @@ class PanelF2DDisp(wx.Panel):
 		self.SetSizerAndFit(sizer)
        
 	def draw(self, r=None):
-		title = self.p.p.fkey.title()+', t='+str(self.p.p.time)
+		title = self.p.fkey.title()+', t='+str(self.p.time)
 		if r:
-			self.p.p.field.truncate(r)
-			self.p.X = self.p.p.field['xe']
-			self.p.Y = self.p.p.field['ze']
-		self.p.status_message('Drawing')
+			self.p.field.truncate(r)
+			self.p.X = self.p.field['xe']
+			self.p.Y = self.p.field['ze']
+		self.p.p.status_message('Drawing')
 		if self.p.streamline:
-			U = self.p.p.field['Bx']	
-			V = self.p.p.field['Bz']
+			U = self.p.field['Bx']	
+			V = self.p.field['Bz']
 		else:
 			U = V = None	
-		if self.p.p.fkey in self.p.p.singlelist:
+		if self.p.fkey in self.p.singlelist:
 			self.fig.draw_one(title, self.p.X, self.p.Y,
-				self.p.p.field[self.p.p.fkey], U, V)
+				self.p.field[self.p.fkey], U, V)
 		else:
 			self.fig.draw_quad(title, self.p.X, self.p.Y,
-				self.p.p.field[self.p.p.fkey], U, V)
-		self.p.status_message('Done')
+				self.p.field[self.p.fkey], U, V)
+		self.p.p.status_message('Done')
 
 
 class PanelF2DCtrl(wx.Panel):
@@ -147,25 +147,22 @@ class PanelF2DCtrl(wx.Panel):
 	# Create a Radio Box for field keys
 	#
 		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
-				choices = self.p.p.fieldlist,
+				choices = self.p.fieldlist,
 				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
-		self.rb_fkey.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey)
 
 		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
 	# Create a Text Control to modify time
 	#
 		st_time = wx.StaticText(self, label = 'Time:')
 		self.tc_time = wx.TextCtrl(self)
-		self.tc_time.SetValue(self.p.p.time)
 		sizer_time = wx.BoxSizer(wx.HORIZONTAL)
 		sizer_time.Add(st_time, 0, flags)
 		sizer_time.Add(self.tc_time, 0, flags)
 
 	# Create a Toggle Button to add magnetic field lines
 	#
-		tb_stream = wx.ToggleButton(self, label='Magnetic Field Line')
-		tb_stream.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream)
-		tb_stream.SetValue(False)
+		self.tb_stream = wx.ToggleButton(self,
+				label='Magnetic Field Line')
 
 	# Create a Text Control to modify range
 	#
@@ -174,14 +171,6 @@ class PanelF2DCtrl(wx.Panel):
 			for i in ['xmin:','xmax:','zmin:','zmax:']]
 		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
 			for i in range(4)]
-		nx = self.p.p.field.data['nnx']
-		nz = self.p.p.field.data['nnz']
-		self.tc_range[0].SetRange(0, nx)
-		self.tc_range[1].SetRange(0, nx)
-		self.tc_range[1].SetValue(nx)
-		self.tc_range[2].SetRange(0, nz)
-		self.tc_range[3].SetRange(0, nz)
-		self.tc_range[3].SetValue(nz)
 		sizer_range = wx.GridSizer(rows=4, cols=2)
 		for i in range(4):
 			sizer_range.Add(st_range[i], 0, flags)
@@ -189,13 +178,11 @@ class PanelF2DCtrl(wx.Panel):
 
 	# Create Buttons for reloading data and redraw
 	#
-		btn_load = wx.Button(self, label = 'Reload')
-		btn_load.Bind(wx.EVT_BUTTON, self.on_btn_load)
-		btn_draw = wx.Button(self, label = 'Redraw')
-		btn_draw.Bind(wx.EVT_BUTTON, self.on_btn_draw)
+		self.btn_load = wx.Button(self, label = 'Load')
+		self.btn_draw = wx.Button(self, label = 'Draw')
 		sizer_refresh = wx.BoxSizer(wx.HORIZONTAL)
-		sizer_refresh.Add(btn_load, 0, flags)
-		sizer_refresh.Add(btn_draw, 0, flags)
+		sizer_refresh.Add(self.btn_load, 0, flags)
+		sizer_refresh.Add(self.btn_draw, 0, flags)
 
 	# Sizer and Fit
 	#
@@ -207,86 +194,6 @@ class PanelF2DCtrl(wx.Panel):
 		sizer.Add(st_range_label, 0, flags)
 		sizer.Add(sizer_range, 0, flags, pad)
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
-		sizer.Add(tb_stream, 0, flags, pad)
+		sizer.Add(self.tb_stream, 0, flags, pad)
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
-
-	def on_rb_fkey(self, event):
-		""" Change the field key
-		"""
-		self.p.p.fkey = self.rb_fkey.GetItemLabel(
-				self.rb_fkey.GetSelection())
-
-	def on_tb_stream(self, event):
-		""" Toggle stream lines
-		"""
-		self.p.streamline = not self.p.streamline
-		self.p.disp_panel.draw()
-
-	def on_btn_load(self, event):
-		""" Reload the data
-		"""
-		time = self.tc_time.GetValue()
-		self.p.p.filename = 'fields-' + time.zfill(5) + '.dat'
-		ret = self.p.p.update_field_data()
-		if ret:
-			self.p.status_message('Loaded ' + self.p.p.filename)
-
-	def on_btn_draw(self, event):
-		""" Redraw the figure
-		"""
-		r = [self.tc_range[i].GetValue() for i in range(4)]
-		if r[0] >= r[1] or r[2] >= r[3]:
-			r = None
-		if self.p.p.field:
-			self.p.disp_panel.draw(r)
-		else:
-			dlg = wx.MessageDialog(self, 'Load Data First!',
-					'Error', wx.ICON_ERROR)
-			dlg.ShowModal()
-			dlg.Destroy()
-
-
-class FrameF2D(wx.Frame):
-	""" Frame for field plots in 2D
-		* Menu Bar at top
-		* Display Panel on the left
-		* Control Panel on the right
-		* Status Bar at bottom 
-	"""
-	streamline = False
-	X = None; Y = None
-
-	def __init__(self, parent, *args, **kwargs):
-		""" Create the F2D Frame
-		"""
-		wx.Frame.__init__(self, parent, *args, **kwargs)
-
-	# Save a local reference to the Main Frame
-	#
-		self.p = parent
-        
-	# Create a Control Panel
-	#
-		self.ctrl_panel = PanelF2DCtrl(self)
-
-	# Create a Display Panel
-	#
-		self.disp_panel = PanelF2DDisp(self)
-
-	# Create the Status Bar
-	#
-		self.status_bar = self.CreateStatusBar()
-		self.status_message('Loaded ' + self.p.filename)
-
-	# Sizer and Fit
-	#
-		sizer = wx.BoxSizer(wx.HORIZONTAL)
-		sizer.Add(self.disp_panel, 1, wx.EXPAND)
-		sizer.Add(self.ctrl_panel, 0)
-		self.SetSizerAndFit(sizer)
-
-	def status_message(self, msg):
-		""" Display a message in Status Bar
-		"""
-		self.status_bar.SetStatusText(msg)
