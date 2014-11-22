@@ -44,19 +44,27 @@ class PanelF2D(wx.Panel):
 	#
 		self.p = parent
 
+	# Add a control Panel and a display Panel
+	#
 		self.ctrlF2D = GUI.PanelF2DCtrl(self)
 		self.dispF2D = GUI.PanelF2DDisp(self)
 
+	# Sizer and Fit
+	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
 		sizer.Add(self.dispF2D, 1, wx.EXPAND)
 		sizer.Add(self.ctrlF2D, 0)
 		self.SetSizerAndFit(sizer)
 
+	# Set default initial values
+	#
 		self.ctrlF2D.tb_stream.SetValue(False)
 		
 		if self.p.dirname and self.p.filename:
 			self.update_data()
 
+	# Bind to control Panel events
+	#
 		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
 				self.ctrlF2D.rb_fkey)
 		self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream,
@@ -65,9 +73,14 @@ class PanelF2D(wx.Panel):
 				self.ctrlF2D.btn_load)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
 				self.ctrlF2D.btn_draw)
+
+	# Listen to Menu File Open event
+	#
 		pub.subscribe(self.update_data, 'File Open')
 
 	def update_data(self):
+		""" Update field if the file is valid
+		"""
 		f = os.path.join(self.p.dirname, self.p.filename)
 		try:
 			self.field = PIC.FieldNASA(f)
@@ -81,13 +94,17 @@ class PanelF2D(wx.Panel):
 			self.set_range()
 
 	def set_range(self):
+		""" Reset the grid range
+		"""
 		nx = self.field.data['nnx']
 		nz = self.field.data['nnz']
 		self.ctrlF2D.tc_range[0].SetRange(0, nx)
 		self.ctrlF2D.tc_range[1].SetRange(0, nx)
-		self.ctrlF2D.tc_range[1].SetValue(nx)
 		self.ctrlF2D.tc_range[2].SetRange(0, nz)
 		self.ctrlF2D.tc_range[3].SetRange(0, nz)
+		self.ctrlF2D.tc_range[0].SetValue(0)
+		self.ctrlF2D.tc_range[1].SetValue(nx)
+		self.ctrlF2D.tc_range[2].SetValue(0)
 		self.ctrlF2D.tc_range[3].SetValue(nz)
 
 	def on_rb_fkey(self, event):
@@ -100,7 +117,7 @@ class PanelF2D(wx.Panel):
 		""" Toggle stream lines
 		"""
 		self.streamline = not self.streamline
-		self.dispF2D.draw()
+		self.on_btn_draw(event)
 
 	def on_btn_load(self, event):
 		""" Load the data
@@ -112,11 +129,28 @@ class PanelF2D(wx.Panel):
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
+		title = self.fkey.title()+', t='+str(self.time)
 		r = [self.ctrlF2D.tc_range[i].GetValue() for i in range(4)]
 		if r[0] >= r[1] or r[2] >= r[3]:
 			r = None
 		if self.field:
-			self.dispF2D.draw(r)
+			if r:
+				self.field.truncate(r)
+				X = self.field['xe']
+				Y = self.field['ze']
+			Z = self.field[self.fkey]
+			if self.streamline:
+				U = self.field['Bx']
+				V = self.field['Bz']
+			else:
+				U = V = None
+			if self.fkey in self.singlelist:
+				N = 1
+			else:
+				N = 4
+			self.p.status_message('Drawing')
+			self.dispF2D.draw(title,N,X,Y,Z,U,V)
+			self.p.status_message('Done')
 		else:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
 					'Error', wx.ICON_ERROR)

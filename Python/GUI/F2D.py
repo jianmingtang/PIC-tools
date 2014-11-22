@@ -88,13 +88,9 @@ class PanelF2DDisp(wx.Panel):
 		* Figure Canvas
 		* Navigation Toolbar
 	"""
-	def __init__(self, parent, *args, **kwargs):
-		wx.Panel.__init__(self, parent, *args, **kwargs)
+	def __init__(self, *args, **kwargs):
+		wx.Panel.__init__(self, *args, **kwargs)
 
-	# Save a local reference to the Main Frame
-	#
-		self.p = parent
-        
         # Create a Figure and a FigCanvas
 	#
 		self.fig = FigureF2D()
@@ -111,31 +107,20 @@ class PanelF2DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, r=None):
-		title = self.p.fkey.title()+', t='+str(self.p.time)
-		if r:
-			self.p.field.truncate(r)
-			self.p.X = self.p.field['xe']
-			self.p.Y = self.p.field['ze']
-		self.p.p.status_message('Drawing')
-		if self.p.streamline:
-			U = self.p.field['Bx']	
-			V = self.p.field['Bz']
+	def draw(self, title, N, X, Y, Z, U, V):
+		if N == 1:
+			self.fig.draw_one(title, X, Y, Z, U, V)
 		else:
-			U = V = None	
-		if self.p.fkey in self.p.singlelist:
-			self.fig.draw_one(title, self.p.X, self.p.Y,
-				self.p.field[self.p.fkey], U, V)
-		else:
-			self.fig.draw_quad(title, self.p.X, self.p.Y,
-				self.p.field[self.p.fkey], U, V)
-		self.p.p.status_message('Done')
+			self.fig.draw_quad(title, X, Y, Z, U, V)
 
 
 class PanelF2DCtrl(wx.Panel):
 	""" Control Panel
 		* Radio Box: select a field
-		* Draw Button: redraw figure
+		* Text Ctrl: time
+		* Button: magnetic field lines
+		* Text Ctrl: grid range
+		* Buttons: load data, draw figure
 	"""
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)

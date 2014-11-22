@@ -14,7 +14,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import wx
 import numpy
 import matplotlib
@@ -69,100 +68,7 @@ class FigureF1D(Figure):
 		self.canvas.draw()
 
 
-class F1DCtrlPanel(wx.Panel):
-	""" Control Panel
-		* Radio Box: select a field
-	"""
-	def __init__(self, parent, *args, **kwargs):
-		wx.Panel.__init__(self, parent, *args, **kwargs)
-
-	# Save a local reference to Main Frame
-	#
-		self.p = parent
-
-	# Create a Radio Box for 1D cut direction
-	#
-		self.rb_cut = wx.RadioBox(self, label = 'Select cut direction',
-				choices = ['x','z'])
-		self.rb_cut.Bind(wx.EVT_RADIOBOX, self.on_rb_cut)
-
-		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
-
-	# Create a Slider for the cut (fixed) value
-	#
-		self.slr_cut = wx.Slider(self, value = self.p.cut,
-				size = (150,-1), minValue = 0,
-				style = wx.SL_HORIZONTAL | wx.SL_LABELS)
-		self.slr_cut.Bind(wx.EVT_SCROLL,
-				self.on_slr_cut)
-
-	# Create Buttons for reloading data and redraw
-	#
-		btn_load = wx.Button(self, label = 'Reload')
-		btn_load.Bind(wx.EVT_BUTTON, self.on_btn_load)
-		btn_draw = wx.Button(self, label = 'Redraw')
-		btn_draw.Bind(wx.EVT_BUTTON, self.on_btn_draw)
-		sizer_refresh = wx.BoxSizer(wx.HORIZONTAL)
-		sizer_refresh.Add(btn_load, 0, flags)
-		sizer_refresh.Add(btn_draw, 0, flags)
-
-	# Sizer and Fit
-	#
-		pad = 3
-		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.rb_cut, 0, flags, pad)
-		sizer.Add(self.slr_cut, 100, flags, pad)
-		sizer.Add(sizer_refresh, 0, flags, pad)
-		self.SetSizerAndFit(sizer)
-
-# Error:
-#		if self.p.p.field:
-#			self.on_btn_load(None)
-#			self.on_btn_draw(None)
-
-	def on_rb_cut(self, event):
-		""" Change the field key
-		"""
-		self.p.cut_dir = self.rb_cut.GetItemLabel(
-				self.rb_cut.GetSelection())
-
-	def on_slr_cut(self, event):
-		""" Change the cut value
-		"""
-		self.p.cut = self.slr_cut.GetValue()
-		self.on_btn_load(event)
-		self.on_btn_draw(event)
-
-	def on_btn_load(self, event):
-		""" Reload the data
-		"""
-		fk = self.p.p.field[self.p.p.fkey]
-		if self.p.cut_dir == 'x':
-			self.p.X = self.p.p.field['ze']
-			self.p.C = self.p.p.field['xe']
-		else:
-			self.p.X = self.p.p.field['xe']
-			self.p.C = self.p.p.field['ze']
-		self.slr_cut.SetMax(len(self.p.C)-1)
-
-		if self.p.p.fkey in self.p.p.singlelist:
-			if self.p.cut_dir == 'x':
-				self.p.Y = fk[:,self.p.cut]
-			else:
-				self.p.Y = fk[self.p.cut]
-		else:
-			if self.p.cut_dir == 'x':
-				self.p.Y = fk[:,:,self.p.cut]
-			else:
-				self.p.Y = fk[:,self.p.cut]
-
-	def on_btn_draw(self, event):
-		""" Redraw the figure
-		"""
-		self.p.disp_panel.draw()
-
-
-class F1DDispPanel(wx.Panel):
+class PanelF1DDisp(wx.Panel):
 	""" Display Panel for F1D
 		* Figure Canvas
 		* Navigation Toolbar
@@ -170,7 +76,7 @@ class F1DDispPanel(wx.Panel):
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
 
-	# Save a local reference to Main Frame
+	# Save a local reference to the F2D Panel
 	#
 		self.p = parent
         
@@ -206,6 +112,48 @@ class F1DDispPanel(wx.Panel):
 		self.p.status_message('Done')
 
         
+class PanelF1DCtrl(wx.Panel):
+	""" Control Panel
+		* Radio Box: select a cut direction
+	"""
+	def __init__(self, parent, *args, **kwargs):
+		wx.Panel.__init__(self, parent, *args, **kwargs)
+
+	# Save a local reference to the F2D Panel
+	#
+		self.p = parent
+
+	# Create a Radio Box for 1D cut direction
+	#
+		self.rb_cut = wx.RadioBox(self, label = 'Select cut direction',
+				choices = ['x','z'])
+
+		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
+
+	# Create a Slider for the cut (fixed) value
+	#
+		self.slr_cut = wx.Slider(self, value = self.p.cut,
+				size = (150,-1), minValue = 0,
+				style = wx.SL_HORIZONTAL | wx.SL_LABELS)
+
+	# Create Buttons for reloading data and redraw
+	#
+		self.btn_load = wx.Button(self, label = 'Load')
+		self.btn_draw = wx.Button(self, label = 'Draw')
+		sizer_refresh = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_refresh.Add(self.btn_load, 0, flags)
+		sizer_refresh.Add(self.btn_draw, 0, flags)
+
+	# Sizer and Fit
+	#
+		pad = 3
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer.Add(self.rb_cut, 0, flags, pad)
+		sizer.Add(self.slr_cut, 100, flags, pad)
+		sizer.Add(sizer_refresh, 0, flags, pad)
+		self.SetSizerAndFit(sizer)
+
+
 class FrameF1D(wx.Frame):
 	""" Frame for 1D fields and control parameters
 		* Display Panel on the left
@@ -226,11 +174,11 @@ class FrameF1D(wx.Frame):
 
 	# Create a Display Panel
 	#
-		self.disp_panel = F1DDispPanel(self)
+		self.dispF1D = PanelF1DDisp(self)
 
 	# Create a Control Panel
 	#
-		self.ctrl_panel = F1DCtrlPanel(self)
+		self.ctrlF1D = PanelF1DCtrl(self)
 
 	# Create the Status Bar
 	#
@@ -239,11 +187,61 @@ class FrameF1D(wx.Frame):
 	# Sizer and Fit
 	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
-		sizer.Add(self.disp_panel, 1, wx.EXPAND)
-		sizer.Add(self.ctrl_panel, 0)
+		sizer.Add(self.dispF1D, 1, wx.EXPAND)
+		sizer.Add(self.ctrlF1D, 0)
 		self.SetSizerAndFit(sizer)
 
+	# Bind to control Panel events
+	#
+		self.Bind(wx.EVT_RADIOBOX, self.on_rb_cut, self.ctrlF1D.rb_cut)
+		self.Bind(wx.EVT_SCROLL, self.on_slr_cut, self.ctrlF1D.slr_cut)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
+				self.ctrlF1D.btn_load)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
+				self.ctrlF1D.btn_draw)
+
 	def status_message(self, msg):
-		""" Display a message in Status Bar
+		""" Display a message in the Status Bar
 		"""
 		self.status_bar.SetStatusText(msg)
+
+	def on_rb_cut(self, event):
+		""" Change the field key
+		"""
+		self.cut_dir = self.ctrlF1D.rb_cut.GetItemLabel(
+				self.ctrlF1D.rb_cut.GetSelection())
+
+	def on_slr_cut(self, event):
+		""" Change the cut value
+		"""
+		self.cut = self.ctrlF1D.slr_cut.GetValue()
+		self.on_btn_load(event)
+		self.on_btn_draw(event)
+
+	def on_btn_load(self, event):
+		""" Reload the data
+		"""
+		fk = self.p.field[self.p.fkey]
+		if self.cut_dir == 'x':
+			self.X = self.p.field['ze']
+			self.C = self.p.field['xe']
+		else:
+			self.X = self.p.field['xe']
+			self.C = self.p.field['ze']
+		self.ctrlF1D.slr_cut.SetMax(len(self.C)-1)
+
+		if self.p.fkey in self.p.singlelist:
+			if self.cut_dir == 'x':
+				self.Y = fk[:,self.cut]
+			else:
+				self.Y = fk[self.cut]
+		else:
+			if self.cut_dir == 'x':
+				self.Y = fk[:,:,self.cut]
+			else:
+				self.Y = fk[:,self.cut]
+
+	def on_btn_draw(self, event):
+		""" Redraw the figure
+		"""
+		self.dispF1D.draw()
