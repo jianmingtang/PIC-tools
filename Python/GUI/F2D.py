@@ -150,7 +150,10 @@ class PanelF2DCtrl(wx.Panel):
 				choices = self.p.fieldlist,
 				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
 
+	# flags for Text Control
+	#
 		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
+
 	# Create a Text Control to modify time
 	#
 		st_time = wx.StaticText(self, label = 'Time:')

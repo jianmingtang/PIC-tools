@@ -65,16 +65,17 @@ class PanelF2D(wx.Panel):
 				self.ctrlF2D.btn_load)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
 				self.ctrlF2D.btn_draw)
+		pub.subscribe(self.update_data, 'File Open')
 
 	def update_data(self):
 		f = os.path.join(self.p.dirname, self.p.filename)
 		try:
 			self.field = PIC.FieldNASA(f)
 		except:
-			self.p.status_message('Fail')
+			self.p.status_message('Error: Load Fail!')
 			self.field = None
-		self.p.status_message(f)
 		if self.field:
+			self.p.status_message('Loaded ' + f)
 			self.time = self.p.filename[7:12].lstrip('0')
 			self.ctrlF2D.tc_time.SetValue(self.time)
 			self.set_range()
@@ -102,16 +103,14 @@ class PanelF2D(wx.Panel):
 		self.dispF2D.draw()
 
 	def on_btn_load(self, event):
-		""" Reload the data
+		""" Load the data
 		"""
 		time = self.ctrlF2D.tc_time.GetValue()
 		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
-		ret = self.update_data()
-		if ret:
-			self.p.status_message('Loaded ' + self.p.filename)
+		self.update_data()
 
 	def on_btn_draw(self, event):
-		""" Redraw the figure
+		""" Draw the figure
 		"""
 		r = [self.ctrlF2D.tc_range[i].GetValue() for i in range(4)]
 		if r[0] >= r[1] or r[2] >= r[3]:
@@ -123,51 +122,6 @@ class PanelF2D(wx.Panel):
 					'Error', wx.ICON_ERROR)
 			dlg.ShowModal()
 			dlg.Destroy()
-
-
-class FrameF2D(wx.Frame):
-	""" Frame for field plots in 2D
-		* Menu Bar at top
-		* Display Panel on the left
-		* Control Panel on the right
-		* Status Bar at bottom 
-	"""
-	streamline = False
-	X = None; Y = None
-
-	def __init__(self, parent, *args, **kwargs):
-		""" Create the F2D Frame
-		"""
-		wx.Frame.__init__(self, parent, *args, **kwargs)
-
-	# Save a local reference to the Main Frame
-	#
-		self.p = parent
-        
-	# Create a Control Panel
-	#
-		self.ctrl_panel = PanelF2DCtrl(self)
-
-	# Create a Display Panel
-	#
-		self.disp_panel = PanelF2DDisp(self)
-
-	# Create the Status Bar
-	#
-		self.status_bar = self.CreateStatusBar()
-		self.status_message('Loaded ' + self.p.filename)
-
-	# Sizer and Fit
-	#
-		sizer = wx.BoxSizer(wx.HORIZONTAL)
-		sizer.Add(self.disp_panel, 1, wx.EXPAND)
-		sizer.Add(self.ctrl_panel, 0)
-		self.SetSizerAndFit(sizer)
-
-	def status_message(self, msg):
-		""" Display a message in Status Bar
-		"""
-		self.status_bar.SetStatusText(msg)
 
 
 class PanelD3D(wx.Panel):
@@ -319,14 +273,6 @@ class MainFrame(wx.Frame):
 		"""
 		self.status_bar.SetStatusText(msg)
  
-	def file_not_found(self):
-		""" file not found
-		"""
-		dlg = wx.MessageDialog(self, 'File not found!',
-				'Error', wx.ICON_ERROR)
-		dlg.ShowModal()
-		dlg.Destroy()
-
 	def renew_panel(self, panel):
 		""" replace the background image with dist/ctrl panels
 		"""
@@ -351,10 +297,12 @@ class MainFrame(wx.Frame):
 			self.dirname = dlg.GetDirectory()
 			self.filename = dlg.GetFilename()
 			f = os.path.join(self.dirname, self.filename)
-			if not os.path.isfile(f):
+			if os.path.isfile(f):
+				pub.sendMessage('File Open')
+			else:
 				self.dirname = ''
 				self.filename = ''
-				self.file_not_found()
+				self.status_message('Error: File Not Found!')
 
 	def on_file_save(self, event):
 		""" Save the current Figure to a PNG file
@@ -385,7 +333,6 @@ class MainFrame(wx.Frame):
 		self.menu.frame_D2D.Enable(False)
 		if not (self.dirname or self.filename):
 			self.on_file_open(None)
-		self.panel.update_data()
 
 	def on_frame_F1D(self, event):
 		frame = GUI.FrameF1D(self.panel, title = self.menu.labelF1D)
