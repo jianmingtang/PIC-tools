@@ -24,6 +24,7 @@ class FieldNASA:
 	quadlist = ['vxs','vys','vzs',
 		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
 	singlelist = ['Bx','By','Bz','Ex','Ey','Ez']
+	fieldlist = singlelist + quadlist
 	data_t = {}
 	def __init__(self, fname, nss=4):
 		""" fname: PIC field data filename

@@ -36,6 +36,9 @@ class PanelF2D(wx.Panel):
 	singlelist = fieldlist[:6]
 	fkey = fieldlist[0]
 	streamline = False
+# data
+#
+	field = None
 
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
@@ -46,37 +49,38 @@ class PanelF2D(wx.Panel):
 
 	# Add a control Panel and a display Panel
 	#
-		self.ctrlF2D = GUI.PanelF2DCtrl(self)
-		self.dispF2D = GUI.PanelF2DDisp(self)
+		self.ctrl = GUI.PanelF2DCtrl(self)
+		self.disp = GUI.PanelF2DDisp(self)
 
 	# Sizer and Fit
 	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
-		sizer.Add(self.dispF2D, 1, wx.EXPAND)
-		sizer.Add(self.ctrlF2D, 0)
+		sizer.Add(self.disp, 1, wx.EXPAND)
+		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
 
-	# Set default initial values
+	# Set default initial values and initialize data
 	#
-		self.ctrlF2D.tb_stream.SetValue(False)
+		self.ctrl.tb_stream.SetValue(False)
 		
 		if self.p.dirname and self.p.filename:
 			self.update_data()
+#			self.on_btn_draw(None)
 
 	# Bind to control Panel events
 	#
 		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
-				self.ctrlF2D.rb_fkey)
+				self.ctrl.rb_fkey)
 		self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream,
-				self.ctrlF2D.tb_stream)
+				self.ctrl.tb_stream)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
-				self.ctrlF2D.btn_load)
+				self.ctrl.btn_load)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
-				self.ctrlF2D.btn_draw)
+				self.ctrl.btn_draw)
 
 	# Listen to Menu File Open event
 	#
-		pub.subscribe(self.update_data, 'File Open')
+#		pub.subscribe(self.update_data, 'File Open')
 
 	def update_data(self):
 		""" Update field if the file is valid
@@ -90,28 +94,31 @@ class PanelF2D(wx.Panel):
 		if self.field:
 			self.p.status_message('Loaded ' + f)
 			self.time = self.p.filename[7:12].lstrip('0')
-			self.ctrlF2D.tc_time.SetValue(self.time)
+			self.ctrl.tc_time.SetValue(self.time)
 			self.set_range()
+			self.ctrl.checklist(self.field.fieldlist)
 
 	def set_range(self):
 		""" Reset the grid range
 		"""
 		nx = self.field.data['nnx']
 		nz = self.field.data['nnz']
-		self.ctrlF2D.tc_range[0].SetRange(0, nx)
-		self.ctrlF2D.tc_range[1].SetRange(0, nx)
-		self.ctrlF2D.tc_range[2].SetRange(0, nz)
-		self.ctrlF2D.tc_range[3].SetRange(0, nz)
-		self.ctrlF2D.tc_range[0].SetValue(0)
-		self.ctrlF2D.tc_range[1].SetValue(nx)
-		self.ctrlF2D.tc_range[2].SetValue(0)
-		self.ctrlF2D.tc_range[3].SetValue(nz)
+		self.ctrl.tc_range[0].SetRange(0, nx)
+		self.ctrl.tc_range[1].SetRange(0, nx)
+		self.ctrl.tc_range[2].SetRange(0, nz)
+		self.ctrl.tc_range[3].SetRange(0, nz)
+#		self.ctrl.tc_range[0].SetValue(0)
+		if self.ctrl.tc_range[1].GetValue() == 0:
+			self.ctrl.tc_range[1].SetValue(nx)
+#		self.ctrl.tc_range[2].SetValue(0)
+		if self.ctrl.tc_range[3].GetValue() == 0:
+			self.ctrl.tc_range[3].SetValue(nz)
 
 	def on_rb_fkey(self, event):
 		""" Change the field key
 		"""
-		self.fkey = self.ctrlF2D.rb_fkey.GetItemLabel(
-				self.ctrlF2D.rb_fkey.GetSelection())
+		self.fkey = self.ctrl.rb_fkey.GetItemLabel(
+				self.ctrl.rb_fkey.GetSelection())
 
 	def on_tb_stream(self, event):
 		""" Toggle stream lines
@@ -122,7 +129,7 @@ class PanelF2D(wx.Panel):
 	def on_btn_load(self, event):
 		""" Load the data
 		"""
-		time = self.ctrlF2D.tc_time.GetValue()
+		time = self.ctrl.tc_time.GetValue()
 		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
 		self.update_data()
 
@@ -130,14 +137,16 @@ class PanelF2D(wx.Panel):
 		""" Draw the figure
 		"""
 		title = self.fkey.title()+', t='+str(self.time)
-		r = [self.ctrlF2D.tc_range[i].GetValue() for i in range(4)]
+		r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
 		if r[0] >= r[1] or r[2] >= r[3]:
 			r = None
 		if self.field:
 			if r:
 				self.field.truncate(r)
-				X = self.field['xe']
-				Y = self.field['ze']
+			Lx = 'X (de)'
+			Ly = 'Z (de)'
+			X = self.field['xe']
+			Y = self.field['ze']
 			Z = self.field[self.fkey]
 			if self.streamline:
 				U = self.field['Bx']
@@ -149,7 +158,7 @@ class PanelF2D(wx.Panel):
 			else:
 				N = 4
 			self.p.status_message('Drawing')
-			self.dispF2D.draw(title,N,X,Y,Z,U,V)
+			self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
 			self.p.status_message('Done')
 		else:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
@@ -163,6 +172,11 @@ class PanelD3D(wx.Panel):
 	"""
 # control variables
 #
+	grid = 101
+# data
+#
+	pdist = None
+
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
 
@@ -170,14 +184,64 @@ class PanelD3D(wx.Panel):
 	#
 		self.p = parent
 
-#		ctrl_panel = GUI.PanelD3DCtrl(self)
-#		disp_panel = GUI.PanelD3DDisp(self)
+		self.ctrl = GUI.PanelD3DCtrl(self)
+		self.disp = GUI.PanelD3DDisp(self)
 
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
-#		sizer.Add(disp_panel, 1, wx.EXPAND)
-#		sizer.Add(ctrl_panel, 0)
+		sizer.Add(self.disp, 1, wx.EXPAND)
+		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
-		self.p.Fit()
+
+	# Initialize data
+	#
+		if self.p.dirname and self.p.filename:
+			self.update_data()
+
+	# Bind to control Panel events
+	#
+#		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
+#				self.ctrl.rb_fkey)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
+				self.ctrl.btn_load)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
+				self.ctrl.btn_draw)
+
+	def update_data(self):
+		""" Update pdist if the file is valid
+		"""
+		f = os.path.join(self.p.dirname, self.p.filename)
+		try:
+			self.pdist = PIC.DistNASA(f, self.grid)
+		except:
+			self.p.status_message('Error: Load Fail!')
+			self.pdist = None
+		if self.pdist:
+			self.p.status_message('Loaded ' + f)
+#			self.set_range()
+
+	def on_btn_load(self, event):
+		""" Load the data
+		"""
+		self.update_data()
+
+	def on_btn_draw(self, event):
+		""" Draw the figure
+		"""
+#		title = self.fkey.title()+', t='+str(self.time)
+		if self.pdist:
+			Lx = 'X (de)'
+			Ly = 'Z (de)'
+#			X = self.field['xe']
+#			Y = self.field['ze']
+#			Z = self.field[self.fkey]
+#			self.p.status_message('Drawing')
+#			self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
+#			self.p.status_message('Done')
+		else:
+			dlg = wx.MessageDialog(self, 'Load Data First!',
+					'Error', wx.ICON_ERROR)
+			dlg.ShowModal()
+			dlg.Destroy()
 
 
 class PanelBackground(wx.Panel):
@@ -195,6 +259,10 @@ class PanelBackground(wx.Panel):
 		sizer.Add(image, 0, wx.ALIGN_CENTER)
 		self.SetSizer(sizer)		
 
+	def update_data(self):
+		""" File Open is called before new panels 
+		"""
+		pass
 
 class MainMenuBar(wx.MenuBar):
 	""" Main Menu Bar
@@ -307,7 +375,7 @@ class MainFrame(wx.Frame):
 		"""
 		self.status_bar.SetStatusText(msg)
  
-	def renew_panel(self, panel):
+	def replace_panel(self, panel):
 		""" replace the background image with dist/ctrl panels
 		"""
 		self.panel.Destroy()
@@ -332,7 +400,8 @@ class MainFrame(wx.Frame):
 			self.filename = dlg.GetFilename()
 			f = os.path.join(self.dirname, self.filename)
 			if os.path.isfile(f):
-				pub.sendMessage('File Open')
+#				pub.sendMessage('File Open')
+				self.panel.update_data()
 			else:
 				self.dirname = ''
 				self.filename = ''
@@ -350,7 +419,7 @@ class MainFrame(wx.Frame):
 
 		if dlg.ShowModal() == wx.ID_OK:
 			path = dlg.GetPath()
-			self.disp_panel.canvas.print_figure(path)
+			self.panel.disp.canvas.print_figure(path)
 			self.status_message("Saved to %s" % path)
 
 	def on_file_exit(self, event):
@@ -359,28 +428,28 @@ class MainFrame(wx.Frame):
 		self.Destroy()
 
 	def on_frame_F2D(self, event):
-		self.renew_panel(PanelF2D(self))
+		if not (self.dirname or self.filename):
+			self.on_file_open(None)
+		self.replace_panel(PanelF2D(self))
 		self.SetTitle(self.menu.labelF2D)
 		self.menu.frame_F2D.Enable(False)
 		self.menu.frame_F1D.Enable(True)
 		self.menu.frame_D3D.Enable(True)
 		self.menu.frame_D2D.Enable(False)
-		if not (self.dirname or self.filename):
-			self.on_file_open(None)
 
 	def on_frame_F1D(self, event):
 		frame = GUI.FrameF1D(self.panel, title = self.menu.labelF1D)
 		frame.Show()
 
 	def on_frame_D3D(self, event):
-		self.renew_panel(PanelD3D(self))
+		if not (self.dirname or self.filename):
+			self.on_file_open(None)
+		self.replace_panel(PanelD3D(self))
 		self.SetTitle(self.menu.labelD3D)
 		self.menu.frame_F2D.Enable(True)
 		self.menu.frame_F1D.Enable(False)
 		self.menu.frame_D3D.Enable(False)
 		self.menu.frame_D2D.Enable(True)
-		if not (self.dirname or self.filename):
-			self.on_file_open(None)
 
 	def on_frame_D2D(self, event):
 		frame = GUI.FrameD2D(self.panel, title = self.menu.labelD2D)

@@ -15,57 +15,12 @@
 
 
 import wx
-import numpy
 import matplotlib
 matplotlib.use('wxAgg')
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import \
 	FigureCanvasWxAgg as FigCanvas, \
 	NavigationToolbar2WxAgg as NavigationToolbar
-
-
-class FigureF1D(Figure):
-	""" The following draw methods are implemented:
-		* 1 subplot
-		* 4 subplots with individual species
-	"""
-	def __init__(self, *args, **kwargs):
-		Figure.__init__(self, *args, **kwargs)
-
-	def draw_one(self, name, X, Y, Lx, Ly):
-		""" Draw a single plot
-			name: title of the plot
-			X, Y: 1D data
-		"""
-	# The default ordering for 2D meshgrid is Fortran style
-	#
-		self.clf()
-		self.ax = self.add_subplot(111)
-		self.ax.set_xlabel(Lx+' (de)', fontsize=14)
-		self.ax.set_ylabel(Ly, fontsize=14)
-		self.ax.plot(X, Y)
-		self.ax.axis('tight')
-		self.ax.set_title(name)
-		self.tight_layout()
-		self.canvas.draw()
-
-	def draw_quad(self, name, X, Y, Lx, Ly):
-		""" Draw 4 subplots
-			name: main title of the plots
-			X, Y: 1D data
-		"""
-	# The default ordering for 2D meshgrid is Fortran style
-	#
-		self.clf()
-		for i in range(4):
-			self.ax = self.add_subplot('22'+str(i+1))
-			self.ax.set_xlabel(Lx+' (de)')
-			self.ax.set_ylabel(Ly)
-			self.ax.plot(X, Y[i])
-			self.ax.axis('tight')
-			self.ax.set_title(name+', s='+str(i))
-		self.tight_layout()
-		self.canvas.draw()
+from mplFig import Figure1D
 
 
 class PanelF1DDisp(wx.Panel):
@@ -73,16 +28,12 @@ class PanelF1DDisp(wx.Panel):
 		* Figure Canvas
 		* Navigation Toolbar
 	"""
-	def __init__(self, parent, *args, **kwargs):
-		wx.Panel.__init__(self, parent, *args, **kwargs)
+	def __init__(self, *args, **kwargs):
+		wx.Panel.__init__(self, *args, **kwargs)
 
-	# Save a local reference to the F2D Panel
-	#
-		self.p = parent
-        
         # Create a Figure and a FigCanvas
 	#
-		self.fig = FigureF1D()
+		self.fig = Figure1D()
 		self.canvas = FigCanvas(self, -1, self.fig)
 
         # Create the navigation toolbar, tied to the canvas
@@ -96,20 +47,11 @@ class PanelF1DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, r=None):
-		title = self.p.cut_dir + '= ' + str(self.p.C[self.p.cut])
-		title += ', t='+str(self.p.p.time)
-		if self.p.cut_dir == 'x':
-			Lx = 'Z'
+	def draw(self, N, title, Lx, Ly, X, Y):
+		if N == 1:
+			self.fig.draw_one(title, Lx, Ly, X, Y)
 		else:
-			Lx = 'X'
-		Ly = self.p.p.fkey.title()
-		self.p.status_message('Drawing')
-		if self.p.p.fkey in self.p.p.singlelist:
-			self.fig.draw_one(title, self.p.X, self.p.Y, Lx, Ly)
-		else:
-			self.fig.draw_quad(title, self.p.X, self.p.Y, Lx, Ly)
-		self.p.status_message('Done')
+			self.fig.draw_quad(title, Lx, Ly, [X]*4, Y)
 
         
 class PanelF1DCtrl(wx.Panel):
@@ -138,10 +80,10 @@ class PanelF1DCtrl(wx.Panel):
 
 	# Create Buttons for reloading data and redraw
 	#
-		self.btn_load = wx.Button(self, label = 'Load')
+		self.btn_apply = wx.Button(self, label = 'Apply')
 		self.btn_draw = wx.Button(self, label = 'Draw')
 		sizer_refresh = wx.BoxSizer(wx.HORIZONTAL)
-		sizer_refresh.Add(self.btn_load, 0, flags)
+		sizer_refresh.Add(self.btn_apply, 0, flags)
 		sizer_refresh.Add(self.btn_draw, 0, flags)
 
 	# Sizer and Fit
@@ -174,11 +116,11 @@ class FrameF1D(wx.Frame):
 
 	# Create a Display Panel
 	#
-		self.dispF1D = PanelF1DDisp(self)
+		self.disp = PanelF1DDisp(self)
 
 	# Create a Control Panel
 	#
-		self.ctrlF1D = PanelF1DCtrl(self)
+		self.ctrl = PanelF1DCtrl(self)
 
 	# Create the Status Bar
 	#
@@ -187,18 +129,18 @@ class FrameF1D(wx.Frame):
 	# Sizer and Fit
 	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
-		sizer.Add(self.dispF1D, 1, wx.EXPAND)
-		sizer.Add(self.ctrlF1D, 0)
+		sizer.Add(self.disp, 1, wx.EXPAND)
+		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
 
 	# Bind to control Panel events
 	#
-		self.Bind(wx.EVT_RADIOBOX, self.on_rb_cut, self.ctrlF1D.rb_cut)
-		self.Bind(wx.EVT_SCROLL, self.on_slr_cut, self.ctrlF1D.slr_cut)
-		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
-				self.ctrlF1D.btn_load)
+		self.Bind(wx.EVT_RADIOBOX, self.on_rb_cut, self.ctrl.rb_cut)
+		self.Bind(wx.EVT_SCROLL, self.on_slr_cut, self.ctrl.slr_cut)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_apply,
+				self.ctrl.btn_apply)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
-				self.ctrlF1D.btn_draw)
+				self.ctrl.btn_draw)
 
 	def status_message(self, msg):
 		""" Display a message in the Status Bar
@@ -208,19 +150,22 @@ class FrameF1D(wx.Frame):
 	def on_rb_cut(self, event):
 		""" Change the field key
 		"""
-		self.cut_dir = self.ctrlF1D.rb_cut.GetItemLabel(
-				self.ctrlF1D.rb_cut.GetSelection())
+		self.cut_dir = self.ctrl.rb_cut.GetItemLabel(
+				self.ctrl.rb_cut.GetSelection())
+		self.on_btn_apply(event)
+		self.on_btn_draw(event)
 
 	def on_slr_cut(self, event):
 		""" Change the cut value
 		"""
-		self.cut = self.ctrlF1D.slr_cut.GetValue()
-		self.on_btn_load(event)
+		self.cut = self.ctrl.slr_cut.GetValue()
+		self.on_btn_apply(event)
 		self.on_btn_draw(event)
 
-	def on_btn_load(self, event):
-		""" Reload the data
+	def on_btn_apply(self, event):
+		""" Apply settings
 		"""
+		if not self.p.field:  return
 		fk = self.p.field[self.p.fkey]
 		if self.cut_dir == 'x':
 			self.X = self.p.field['ze']
@@ -228,7 +173,7 @@ class FrameF1D(wx.Frame):
 		else:
 			self.X = self.p.field['xe']
 			self.C = self.p.field['ze']
-		self.ctrlF1D.slr_cut.SetMax(len(self.C)-1)
+		self.ctrl.slr_cut.SetMax(len(self.C)-1)
 
 		if self.p.fkey in self.p.singlelist:
 			if self.cut_dir == 'x':
@@ -242,6 +187,20 @@ class FrameF1D(wx.Frame):
 				self.Y = fk[:,self.cut]
 
 	def on_btn_draw(self, event):
-		""" Redraw the figure
+		""" Draw the figure
 		"""
-		self.dispF1D.draw()
+		if not self.p.field:  return
+		title = self.cut_dir + '= ' + str(self.C[self.cut])
+		title += ', t='+str(self.p.time)
+		if self.cut_dir == 'x':
+			Lx = 'Z (de)'
+		else:
+			Lx = 'X (de)'
+		Ly = self.p.fkey.title()
+		if self.p.fkey in self.p.singlelist:
+			N = 1
+		else:
+			N = 4
+		self.status_message('Drawing')
+		self.disp.draw(N, title, Lx, Ly, self.X, self.Y)
+		self.status_message('Done')

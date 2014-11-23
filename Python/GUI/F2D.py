@@ -15,72 +15,12 @@
 
 
 import wx
-import numpy
 import matplotlib
 matplotlib.use('wxAgg')
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import \
 	FigureCanvasWxAgg as FigCanvas, \
 	NavigationToolbar2WxAgg as NavigationToolbar
-
-
-class FigureF2D(Figure):
-	""" The following draw methods are implemented:
-		* 1 subplot
-		* 4 subplots with individual species
-	"""
-	def __init__(self, *args, **kwargs):
-		Figure.__init__(self, *args, **kwargs)
-
-	def draw_one(self, name, X, Y, fZ, U=None, V=None):
-		""" Draw a single plot
-			name: title of the plot
-			X, Y: 1D axes data
-			fZ: 2D data set (Fortran style index)
-		"""
-	# The default ordering for 2D meshgrid is Fortran style
-	#
-		fX, fY = numpy.meshgrid(X, Y)
-		self.clf()
-		self.ax = self.add_subplot(111)
-		self.ax.set_xlabel('X (de)',fontsize=14)
-		self.ax.set_ylabel('Z (de)',fontsize=14)
-		pcm = self.ax.pcolormesh(fX, fY, fZ)
-		self.ax.axis('tight')
-		self.colorbar(pcm)
-		self.ax.set_title(name)
-		if U != None and V != None:
-			self.add_streamline(X, Y, U, V)
-		self.tight_layout()
-		self.canvas.draw()
-
-	def draw_quad(self, name, X, Y, fZ, U=None, V=None):
-		""" Draw 4 subplots
-			name: main title of the plots
-			X, Y: 1D axes data
-			fZ: 2D data set (Fortran style index)
-		"""
-	# The default ordering for 2D meshgrid is Fortran style
-	#
-		fX, fY = numpy.meshgrid(X, Y)
-		self.clf()
-		for i in range(4):
-			self.ax = self.add_subplot('22'+str(i+1))
-			self.ax.set_xlabel('X (de)')
-			self.ax.set_ylabel('Z (de)')
-			pcm = self.ax.pcolormesh(fX, fY, fZ[i])
-			self.ax.axis('tight')
-			self.colorbar(pcm)
-			self.ax.set_title(name+', s='+str(i))
-			if U != None and V != None:
-				self.add_streamline(X, Y, U, V)
-		self.tight_layout()
-		self.canvas.draw()
-
-	def add_streamline(self, X, Y, U, V):
-		""" add stream lines defined by (U,V) with fixed densities
-		"""
-		self.ax.streamplot(X,Y,U,V,color='k',density=[5,0.7])
+from mplFig import Figure2D
 
 
 class PanelF2DDisp(wx.Panel):
@@ -93,7 +33,7 @@ class PanelF2DDisp(wx.Panel):
 
         # Create a Figure and a FigCanvas
 	#
-		self.fig = FigureF2D()
+		self.fig = Figure2D()
 		self.canvas = FigCanvas(self, -1, self.fig)
 
         # Create the navigation toolbar, tied to the canvas
@@ -107,11 +47,11 @@ class PanelF2DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, title, N, X, Y, Z, U, V):
+	def draw(self, N, title, Lx, Ly, X, Y, Z, U, V):
 		if N == 1:
-			self.fig.draw_one(title, X, Y, Z, U, V)
+			self.fig.draw_one(title, Lx, Ly, X, Y, Z, U, V)
 		else:
-			self.fig.draw_quad(title, X, Y, Z, U, V)
+			self.fig.draw_quad(title, Lx, Ly, [X]*4, [Y]*4, Z, U, V)
 
 
 class PanelF2DCtrl(wx.Panel):
@@ -185,3 +125,9 @@ class PanelF2DCtrl(wx.Panel):
 		sizer.Add(self.tb_stream, 0, flags, pad)
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
+
+	def checklist(self, s):
+		for i, j in enumerate(self.p.fieldlist):
+			if not j in s:
+				self.rb_fkey.EnableItem(i, False)
+		
