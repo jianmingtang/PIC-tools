@@ -34,8 +34,8 @@ class PanelF2D(wx.Panel):
 	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
 		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
 	singlelist = fieldlist[:6]
-	fkey = fieldlist[0]
-	streamline = False
+#	fkey = fieldlist[0]
+
 # data
 #
 	field = None
@@ -65,7 +65,7 @@ class PanelF2D(wx.Panel):
 		
 		if self.p.dirname and self.p.filename:
 			self.update_data()
-#			self.on_btn_draw(None)
+			self.on_rb_fkey(None)
 
 	# Bind to control Panel events
 	#
@@ -119,11 +119,11 @@ class PanelF2D(wx.Panel):
 		"""
 		self.fkey = self.ctrl.rb_fkey.GetItemLabel(
 				self.ctrl.rb_fkey.GetSelection())
+		self.on_btn_draw(event)
 
 	def on_tb_stream(self, event):
 		""" Toggle stream lines
 		"""
-		self.streamline = not self.streamline
 		self.on_btn_draw(event)
 
 	def on_btn_load(self, event):
@@ -148,7 +148,7 @@ class PanelF2D(wx.Panel):
 			X = self.field['xe']
 			Y = self.field['ze']
 			Z = self.field[self.fkey]
-			if self.streamline:
+			if self.ctrl.tb_stream.GetValue():
 				U = self.field['Bx']
 				V = self.field['Bz']
 			else:
