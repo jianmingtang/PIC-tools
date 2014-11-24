@@ -21,7 +21,7 @@
 
 import os
 import wx
-from wx.lib.pubsub import pub
+#from wx.lib.pubsub import pub
 import PIC
 import GUI
 
@@ -29,12 +29,8 @@ import GUI
 class PanelF2D(wx.Panel):
 	""" F2D Panel (Controller)
 	"""
-# control variables
-#
 	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
 		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
-	singlelist = fieldlist[:6]
-#	fkey = fieldlist[0]
 
 # data
 #
@@ -59,13 +55,13 @@ class PanelF2D(wx.Panel):
 		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
 
-	# Set default initial values and initialize data
+	# Load data from file
 	#
-		self.ctrl.tb_stream.SetValue(False)
-		
-		if self.p.dirname and self.p.filename:
-			self.update_data()
-			self.on_rb_fkey(None)
+		self.load_data()
+
+	# Set fkey and Draw
+	#
+		self.on_rb_fkey(None)
 
 	# Bind to control Panel events
 	#
@@ -78,25 +74,26 @@ class PanelF2D(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
 				self.ctrl.btn_draw)
 
-	# Listen to Menu File Open event
-	#
-#		pub.subscribe(self.update_data, 'File Open')
-
-	def update_data(self):
+	def load_data(self):
 		""" Update field if the file is valid
 		"""
-		f = os.path.join(self.p.dirname, self.p.filename)
+		if not self.p.pathname: return
+
+		f = self.p.pathname
 		try:
+			self.p.status_message('Loading')
 			self.field = PIC.FieldNASA(f)
+			self.p.status_message('Done')
 		except:
 			self.p.status_message('Error: Load Fail!')
 			self.field = None
 		if self.field:
 			self.p.status_message('Loaded ' + f)
-			self.time = self.p.filename[7:12].lstrip('0')
+			head, tail = os.path.split(f)
+			self.time = tail[7:12].lstrip('0')
 			self.ctrl.tc_time.SetValue(self.time)
 			self.set_range()
-			self.ctrl.checklist(self.field.fieldlist)
+			self.ctrl.update_rb_list(self.field.fieldlist)
 
 	def set_range(self):
 		""" Reset the grid range
@@ -107,10 +104,9 @@ class PanelF2D(wx.Panel):
 		self.ctrl.tc_range[1].SetRange(0, nx)
 		self.ctrl.tc_range[2].SetRange(0, nz)
 		self.ctrl.tc_range[3].SetRange(0, nz)
-#		self.ctrl.tc_range[0].SetValue(0)
+		# Set the upper bound only if it is zero.
 		if self.ctrl.tc_range[1].GetValue() == 0:
 			self.ctrl.tc_range[1].SetValue(nx)
-#		self.ctrl.tc_range[2].SetValue(0)
 		if self.ctrl.tc_range[3].GetValue() == 0:
 			self.ctrl.tc_range[3].SetValue(nz)
 
@@ -129,42 +125,44 @@ class PanelF2D(wx.Panel):
 	def on_btn_load(self, event):
 		""" Load the data
 		"""
-		time = self.ctrl.tc_time.GetValue()
-		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
-		self.update_data()
+#		time = self.ctrl.tc_time.GetValue()
+#		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
+		self.p.get_path_from_dirctrl(None)
+		self.load_data()
 
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
-		title = self.fkey.title()+', t='+str(self.time)
-		r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
-		if r[0] >= r[1] or r[2] >= r[3]:
-			r = None
-		if self.field:
-			if r:
-				self.field.truncate(r)
-			Lx = 'X (de)'
-			Ly = 'Z (de)'
-			X = self.field['xe']
-			Y = self.field['ze']
-			Z = self.field[self.fkey]
-			if self.ctrl.tb_stream.GetValue():
-				U = self.field['Bx']
-				V = self.field['Bz']
-			else:
-				U = V = None
-			if self.fkey in self.singlelist:
-				N = 1
-			else:
-				N = 4
-			self.p.status_message('Drawing')
-			self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
-			self.p.status_message('Done')
-		else:
+		if not self.field:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
 					'Error', wx.ICON_ERROR)
 			dlg.ShowModal()
 			dlg.Destroy()
+			return
+
+		title = self.fkey.title() + ', t=' + str(self.time)
+		r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
+		if r[0] >= r[1] or r[2] >= r[3] or min(r) < 0:
+			r = None
+		else:
+			self.field.truncate(r)
+		Lx = 'X (de)'
+		Ly = 'Z (de)'
+		X = self.field['xe']
+		Y = self.field['ze']
+		Z = self.field[self.fkey]
+		if self.ctrl.tb_stream.GetValue():
+			U = self.field['Bx']
+			V = self.field['Bz']
+		else:
+			U = V = None
+		if self.fkey in self.field.singlelist:
+			N = 1
+		else:
+			N = 4
+		self.p.status_message('Drawing')
+		self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
+		self.p.status_message('Done')
 
 
 class PanelD3D(wx.Panel):
@@ -173,6 +171,8 @@ class PanelD3D(wx.Panel):
 # control variables
 #
 	grid = 101
+	iso = 0.2
+
 # data
 #
 	pdist = None
@@ -184,64 +184,92 @@ class PanelD3D(wx.Panel):
 	#
 		self.p = parent
 
+	# Add a control Panel and a display Panel
+	#
 		self.ctrl = GUI.PanelD3DCtrl(self)
 		self.disp = GUI.PanelD3DDisp(self)
 
+	# Sizer and Fit
+	#
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
 		sizer.Add(self.disp, 1, wx.EXPAND)
 		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
 
-	# Initialize data
+	# Load data from file
 	#
-		if self.p.dirname and self.p.filename:
-			self.update_data()
+		self.load_data()
+		self.set_range()
+
+	# Draw
+	#
+		self.on_btn_draw(None)
 
 	# Bind to control Panel events
 	#
-#		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
-#				self.ctrl.rb_fkey)
+#		self.Bind(wx.EVT_RADIOBOX, self.on_rb_key,
+#				self.ctrl.rb_key)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
 				self.ctrl.btn_load)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
 				self.ctrl.btn_draw)
 
-	def update_data(self):
+	def load_data(self):
 		""" Update pdist if the file is valid
 		"""
-		f = os.path.join(self.p.dirname, self.p.filename)
+		if not self.p.pathname: return
+
+		f = self.p.pathname
 		try:
+			self.p.status_message('Loading')
 			self.pdist = PIC.DistNASA(f, self.grid)
+			self.p.status_message('Done')
 		except:
 			self.p.status_message('Error: Load Fail!')
 			self.pdist = None
 		if self.pdist:
 			self.p.status_message('Loaded ' + f)
-#			self.set_range()
+
+	def set_range(self):
+		""" Reset the grid range
+		"""
+		for i in range(6):
+			self.ctrl.tc_range[i].SetRange(0, self.grid)
+		for i in range(3):
+			self.ctrl.tc_range[i+i].SetValue(0)
+			self.ctrl.tc_range[i+i+1].SetValue(self.grid)
 
 	def on_btn_load(self, event):
 		""" Load the data
 		"""
-		self.update_data()
+		self.p.get_path_from_dirctrl(None)
+		self.load_data()
 
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
-#		title = self.fkey.title()+', t='+str(self.time)
-		if self.pdist:
-			Lx = 'X (de)'
-			Ly = 'Z (de)'
-#			X = self.field['xe']
-#			Y = self.field['ze']
-#			Z = self.field[self.fkey]
-#			self.p.status_message('Drawing')
-#			self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
-#			self.p.status_message('Done')
-		else:
+		if not self.pdist:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
 					'Error', wx.ICON_ERROR)
 			dlg.ShowModal()
 			dlg.Destroy()
+			return
+
+		r = [self.ctrl.tc_range[i].GetValue() for i in range(6)]
+		if r[0] >= r[1] or r[2] >= r[3] or r[4] >= r[5] or min(r) < 0:
+			r = None
+		else:
+			self.pdist.truncate(r)
+		title = 'f(v)'
+		Lx = 'X'
+		Ly = 'Y'
+		Lz = 'Z'
+		X = Y = Z = self.pdist['axes'][0]
+		f = self.pdist['fxyz'][1].transpose()
+		iso = max(f.ravel()) * self.iso
+		self.p.status_message('Drawing')
+		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f, iso)
+		self.p.status_message('Done')
 
 
 class PanelBackground(wx.Panel):
@@ -259,8 +287,8 @@ class PanelBackground(wx.Panel):
 		sizer.Add(image, 0, wx.ALIGN_CENTER)
 		self.SetSizer(sizer)		
 
-	def update_data(self):
-		""" File Open is called before new panels 
+	def load_data(self):
+		""" Do nothing if on_file_open() is called.
 		"""
 		pass
 
@@ -332,8 +360,7 @@ class MainFrame(wx.Frame):
 		* Panel (Background/F2D/D3D)
 		* StatusBar
 	"""
-	dirname = ''
-	filename = ''
+	pathname = ''
 
 	def __init__(self, *args, **kwargs):
 		""" Create the Main Frame with MainMenuBar/Panel/StatusBar
@@ -345,6 +372,11 @@ class MainFrame(wx.Frame):
 		self.menu = MainMenuBar()
 		self.SetMenuBar(self.menu)
 
+	# Add a directory control tree
+	#
+		self.tree = wx.GenericDirCtrl(self, size=(200,-1),
+				dir = os.getcwd())
+
 	# Add a backgroud image
 	#
 		self.panel = PanelBackground(self)
@@ -355,7 +387,8 @@ class MainFrame(wx.Frame):
 
 	# Sizer and Fit
 	#
-		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer = wx.BoxSizer(wx.HORIZONTAL)
+		sizer.Add(self.tree, 0, wx.EXPAND)
 		sizer.Add(self.panel, 100, wx.EXPAND)
 		self.SetSizerAndFit(sizer)
 
@@ -370,6 +403,9 @@ class MainFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.on_frame_D3D, self.menu.frame_D3D)
 		self.Bind(wx.EVT_MENU, self.on_frame_D2D, self.menu.frame_D2D)
 
+#		self.Bind(wx.EVT_DIRCTRL_FILEACTIVATED, self.on_tree,
+#				self.tree)
+
 	def status_message(self, msg):
 		""" Display a message in the Status Bar
 		"""
@@ -380,7 +416,8 @@ class MainFrame(wx.Frame):
 		"""
 		self.panel.Destroy()
 		self.panel = panel
-		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer = wx.BoxSizer(wx.HORIZONTAL)
+		sizer.Add(self.tree, 0, wx.EXPAND)
 		sizer.Add(self.panel, 100, wx.EXPAND)
 		self.SetSizerAndFit(sizer)
 
@@ -396,15 +433,13 @@ class MainFrame(wx.Frame):
 		dlg = wx.FileDialog(self, defaultDir = os.getcwd(),
 				style = wx.FD_OPEN)
 		if dlg.ShowModal() == wx.ID_OK:
-			self.dirname = dlg.GetDirectory()
-			self.filename = dlg.GetFilename()
-			f = os.path.join(self.dirname, self.filename)
+			f = dlg.GetPath()
 			if os.path.isfile(f):
-#				pub.sendMessage('File Open')
-				self.panel.update_data()
+				self.pathname = f
+				self.tree.SetPath(f)
+				self.panel.load_data()
 			else:
-				self.dirname = ''
-				self.filename = ''
+				self.pathname = ''
 				self.status_message('Error: File Not Found!')
 
 	def on_file_save(self, event):
@@ -428,7 +463,7 @@ class MainFrame(wx.Frame):
 		self.Destroy()
 
 	def on_frame_F2D(self, event):
-		if not (self.dirname or self.filename):
+		if not self.pathname:
 			self.on_file_open(None)
 		self.replace_panel(PanelF2D(self))
 		self.SetTitle(self.menu.labelF2D)
@@ -442,7 +477,7 @@ class MainFrame(wx.Frame):
 		frame.Show()
 
 	def on_frame_D3D(self, event):
-		if not (self.dirname or self.filename):
+		if not self.pathname:
 			self.on_file_open(None)
 		self.replace_panel(PanelD3D(self))
 		self.SetTitle(self.menu.labelD3D)
@@ -455,6 +490,11 @@ class MainFrame(wx.Frame):
 		frame = GUI.FrameD2D(self.panel, title = self.menu.labelD2D)
 		frame.Show()
 
+	def get_path_from_dirctrl(self, event):
+		f = self.tree.GetPath()
+		if os.path.isfile(f):
+			self.pathname = f
+		
 
 class myApp(wx.App):
 	def OnInit(self):

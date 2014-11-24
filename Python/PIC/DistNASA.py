@@ -22,6 +22,7 @@ class DistNASA:
 	This class is used to store data in ndarray from a NASA PIC data file.
 	Methods for data slicing and summation are provided.
 	"""
+	data_t = {}
 	def __init__(self, fname, grid, nss=4):
 		"""
 		fname: data filename
@@ -45,11 +46,14 @@ class DistNASA:
 			('pad2','i4')
 			])
 		self.data = numpy.fromfile(fname, datatype)[0]
+		self.truncate([0,grid])
 
 	def __getitem__(self, key):
-		return self.data[key]
+		return self.data_t[key]
 
 	def __str__(self):
+		""" This is broken due to truncation
+		"""
 		s = '\n'
 		s += 'Bin location: '
 		s += 'x=(%4g,%4g), z=(%4g,%4g)\n' % (
@@ -61,6 +65,16 @@ class DistNASA:
 			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
 				self['vxa'][i], self['vya'][i], self['vza'][i])
 		return s
+
+	def truncate(self, r):
+		""" We do basic slicing here, so that no copies are made.
+		"""
+		b = r[0]
+		e = r[1]
+		for k in ['fxy','fxz','fyz']:
+                        self.data_t[k] = self.data[k][:,b:e,b:e]
+                self.data_t['fxyz'] = self.data['fxyz'][:,b:e,b:e,b:e]
+		self.data_t['axes'] = self.data['axes'][:,b:e]
 
 	def cut(self, p):
 		"""

@@ -71,9 +71,11 @@ class PanelF2DCtrl(wx.Panel):
 
 	# Create a Radio Box for field keys
 	#
+		fkeylist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
+				'pxx','pyy','pzz','pxy','pxz','pyz','dns']
 		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
-				choices = self.p.fieldlist,
-				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
+				choices = fkeylist, majorDimension = 3,
+				style = wx.RA_SPECIFY_COLS)
 
 	# flags for Text Control
 	#
@@ -90,13 +92,13 @@ class PanelF2DCtrl(wx.Panel):
 	# Create a Toggle Button to add magnetic field lines
 	#
 		self.tb_stream = wx.ToggleButton(self,
-				label='Magnetic Field Line')
+				label = 'Magnetic Field Line')
 
 	# Create a Text Control to modify range
 	#
 		st_range_label = wx.StaticText(self, label = 'Drawing Range:')
-		st_range = [ wx.StaticText(self, label = i) \
-			for i in ['xmin:','xmax:','zmin:','zmax:']]
+		st_range = [ wx.StaticText(self, label = i+j) \
+			for i in ['x','y','z'] for j in ['min:','max:'] ]
 		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
 			for i in range(4)]
 		sizer_range = wx.GridSizer(rows=4, cols=2)
@@ -126,7 +128,9 @@ class PanelF2DCtrl(wx.Panel):
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
 
-	def checklist(self, s):
+	def update_rb_list(self, s):
+		""" Reset the rb list according to the info in data file
+		"""
 		for i, j in enumerate(self.p.fieldlist):
 			if not j in s:
 				self.rb_fkey.EnableItem(i, False)
