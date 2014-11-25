@@ -49,7 +49,8 @@ class Figure3D(Figure):
 		cmap.set_array(dS)
 		return cmap, cmap.to_rgba(dS)
 			 
-	def draw_one(self, name, Lx, Ly, Lz, X, Y, Z, f, iso):
+	def draw_one(self, name, Lx, Ly, Lz, X, Y, Z, f, iso,
+			elev=None, azim=None):
 		""" Draw a single plot
 			name: title of the plot
 			X, Y, Z: 1D axes data
@@ -71,6 +72,7 @@ class Figure3D(Figure):
 		self.ax.set_ylim(Y[0],Y[-1])
 		self.ax.set_zlim(Z[0],Z[-1])
 		self.ax.set_title(name)
+		self.ax.view_init(elev, azim)
 		self.colorbar(cmap, shrink=0.8, fraction=0.1, label=r'V $^2$')
 		self.tight_layout()
 		self.canvas.draw()

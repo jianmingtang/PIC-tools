@@ -48,8 +48,8 @@ class PanelD3DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, title, Lx, Ly, Lz, X, Y, Z, f, iso):
-		self.fig.draw_one(title, Lx, Ly, Lz, X, Y, Z, f, iso)
+	def draw(self, title, Lx, Ly, Lz, X, Y, Z, f, iso, elev, azim):
+		self.fig.draw_one(title,Lx,Ly,Lz,X,Y,Z,f,iso,elev,azim)
 
 
 class PanelD3DCtrl(wx.Panel):
@@ -78,7 +78,7 @@ class PanelD3DCtrl(wx.Panel):
 	#
 		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
 
-	# Create a Text Control to show isovalue
+	# Create a Text Control and a Slider to modify isovalue
 	#
 		st_iso = wx.StaticText(self, label = 'isovalue:')
 		self.tc_iso = wx.TextCtrl(self)
@@ -95,14 +95,26 @@ class PanelD3DCtrl(wx.Panel):
 		st_range_label = wx.StaticText(self, label = 'Drawing Range:')
 		st_range = [ wx.StaticText(self, label = i+j) \
 			for i in ['x','y','z'] for j in ['min:','max:'] ]
-		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
+		self.sc_range = [wx.SpinCtrl(self,size=(80,-1)) 
 			for i in range(6)]
 		for i in range(2,6):
-			self.tc_range[i].Enable(False)
+			self.sc_range[i].Enable(False)
 		sizer_range = wx.GridSizer(rows=6, cols=2)
 		for i in range(6):
 			sizer_range.Add(st_range[i], 0, flags)
-			sizer_range.Add(self.tc_range[i], 0, flags)
+			sizer_range.Add(self.sc_range[i], 0, flags)
+
+	# Create a Text Control for viewing angles
+	#
+		st_elev = wx.StaticText(self, label = 'elevation:')
+		st_azim = wx.StaticText(self, label = 'azimuth:')
+		self.sc_elev = wx.SpinCtrl(self, min=-90, max=90, initial=20)
+		self.sc_azim = wx.SpinCtrl(self, min=0, max=360, initial=40)
+		sizer_view = wx.BoxSizer(wx.VERTICAL)
+		sizer_view.Add(st_elev, 0, flags)
+		sizer_view.Add(self.sc_elev, 0, flags)
+		sizer_view.Add(st_azim, 0, flags)
+		sizer_view.Add(self.sc_azim, 0, flags)
 
 	# Create Buttons for reloading data and redraw
 	#
@@ -122,6 +134,8 @@ class PanelD3DCtrl(wx.Panel):
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
 		sizer.Add(st_range_label, 0, flags)
 		sizer.Add(sizer_range, 0, flags, pad)
+		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
+		sizer.Add(sizer_view, 0, flags, pad)
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
@@ -195,10 +209,10 @@ class PanelD3D(wx.Panel):
 		""" Reset the grid range
 		"""
 		for i in range(6):
-			self.ctrl.tc_range[i].SetRange(0, self.grid)
+			self.ctrl.sc_range[i].SetRange(0, self.grid)
 		for i in range(3):
-			self.ctrl.tc_range[i+i].SetValue(0)
-			self.ctrl.tc_range[i+i+1].SetValue(self.grid)
+			self.ctrl.sc_range[i+i].SetValue(0)
+			self.ctrl.sc_range[i+i+1].SetValue(self.grid)
 
 	def on_rb_plot(self, event):
 		self.plot = self.ctrl.rb_plot.GetSelection()
@@ -224,7 +238,7 @@ class PanelD3D(wx.Panel):
 			dlg.Destroy()
 			return
 
-		r = [self.ctrl.tc_range[i].GetValue() for i in range(6)]
+		r = [self.ctrl.sc_range[i].GetValue() for i in range(6)]
 		if r[0] >= r[1] or r[2] >= r[3] or r[4] >= r[5] or min(r) < 0:
 			r = None
 		else:
@@ -245,6 +259,9 @@ class PanelD3D(wx.Panel):
 		print f.shape
 		iso = max(f.ravel()) * self.iso / 100
 		self.ctrl.tc_iso.SetValue(str(iso))
+		elev = self.ctrl.sc_elev.GetValue()
+		azim = self.ctrl.sc_azim.GetValue()
 		self.p.status_message('Drawing')
-		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f.transpose(), iso)
+		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f.transpose(),
+				iso, elev, azim)
 		self.p.status_message('Done')
