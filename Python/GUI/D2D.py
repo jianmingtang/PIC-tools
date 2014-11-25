@@ -15,16 +15,17 @@
 
 
 import wx
+import numpy
 import matplotlib
 matplotlib.use('wxAgg')
 from matplotlib.backends.backend_wxagg import \
 	FigureCanvasWxAgg as FigCanvas, \
 	NavigationToolbar2WxAgg as NavigationToolbar
-from mplFig import Figure1D
+from mplFig import Figure2D
 
 
-class PanelF1DDisp(wx.Panel):
-	""" Display Panel for F1D
+class PanelD2DDisp(wx.Panel):
+	""" Display Panel for D2D
 		* Figure Canvas
 		* Navigation Toolbar
 	"""
@@ -33,7 +34,7 @@ class PanelF1DDisp(wx.Panel):
 
         # Create a Figure and a FigCanvas
 	#
-		self.fig = Figure1D()
+		self.fig = Figure2D()
 		self.canvas = FigCanvas(self, -1, self.fig)
 
         # Create the navigation toolbar, tied to the canvas
@@ -47,14 +48,14 @@ class PanelF1DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, N, title, Lx, Ly, X, Y):
+	def draw(self, N, title, Lx, Ly, X, Y, Z):
 		if N == 1:
-			self.fig.draw_one(title, Lx, Ly, X, Y)
+			self.fig.draw_one(title, Lx, Ly, X, Y, Z)
 		else:
-			self.fig.draw_quad(title, Lx, Ly, [X]*4, Y)
+			self.fig.draw_quad(title, Lx, Ly, X, Y, Z)
 
         
-class PanelF1DCtrl(wx.Panel):
+class PanelD2DCtrl(wx.Panel):
 	""" Control Panel
 		* Radio Box: select a cut direction
 	"""
@@ -65,10 +66,12 @@ class PanelF1DCtrl(wx.Panel):
 	#
 		self.p = parent
 
-	# Create a Radio Box for 1D cut direction
+	# Create a Radio Box for 2D plot selections
 	#
-		self.rb_cut = wx.RadioBox(self, label = 'Select cut direction',
-				choices = ['x','z'])
+		plist = ['fxy','fxz','fyz','xcut','ycut','zcut']
+		self.rb_key = wx.RadioBox(self, label = 'Select a plot',
+				choices = plist,
+				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
 
 		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
 
@@ -90,13 +93,13 @@ class PanelF1DCtrl(wx.Panel):
 	#
 		pad = 3
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.rb_cut, 0, flags, pad)
+		sizer.Add(self.rb_key, 0, flags, pad)
 		sizer.Add(self.slr_cut, 100, flags, pad)
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
 
 
-class FrameF1D(wx.Frame):
+class FrameD2D(wx.Frame):
 	""" Frame for 1D fields and control parameters
 		* Display Panel on the left
 		* Control Panel on the right
@@ -105,6 +108,7 @@ class FrameF1D(wx.Frame):
 	cut_dir = 'x'
 	cut = 0
 	X = Y = C = None
+	key = 'fxy'
 	def __init__(self, parent, *args, **kwargs):
 		""" Create the Main Frame
 		"""
@@ -116,11 +120,11 @@ class FrameF1D(wx.Frame):
 
 	# Create a Display Panel
 	#
-		self.disp = PanelF1DDisp(self)
+		self.disp = PanelD2DDisp(self)
 
 	# Create a Control Panel
 	#
-		self.ctrl = PanelF1DCtrl(self)
+		self.ctrl = PanelD2DCtrl(self)
 
 	# Create the Status Bar
 	#
@@ -135,7 +139,7 @@ class FrameF1D(wx.Frame):
 
 	# Bind to control Panel events
 	#
-		self.Bind(wx.EVT_RADIOBOX, self.on_rb_cut, self.ctrl.rb_cut)
+		self.Bind(wx.EVT_RADIOBOX, self.on_rb_key, self.ctrl.rb_key)
 		self.Bind(wx.EVT_SCROLL, self.on_slr_cut, self.ctrl.slr_cut)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_apply,
 				self.ctrl.btn_apply)
@@ -147,11 +151,11 @@ class FrameF1D(wx.Frame):
 		"""
 		self.status_bar.SetStatusText(msg)
 
-	def on_rb_cut(self, event):
+	def on_rb_key(self, event):
 		""" Change the field key
 		"""
-		self.cut_dir = self.ctrl.rb_cut.GetItemLabel(
-				self.ctrl.rb_cut.GetSelection())
+		self.key = self.ctrl.rb_key.GetItemLabel(
+				self.ctrl.rb_key.GetSelection())
 		self.on_btn_apply(event)
 		self.on_btn_draw(event)
 
@@ -165,42 +169,26 @@ class FrameF1D(wx.Frame):
 	def on_btn_apply(self, event):
 		""" Apply settings
 		"""
-		if not self.p.field:  return
-		fk = self.p.field[self.p.fkey]
-		if self.cut_dir == 'x':
-			self.X = self.p.field['ze']
-			self.C = self.p.field['xe']
-		else:
-			self.X = self.p.field['xe']
-			self.C = self.p.field['ze']
-		self.ctrl.slr_cut.SetMax(len(self.C)-1)
-
-		if self.p.fkey in self.p.field.singlelist:
-			if self.cut_dir == 'x':
-				self.Y = fk[:,self.cut]
-			else:
-				self.Y = fk[self.cut]
-		else:
-			if self.cut_dir == 'x':
-				self.Y = fk[:,:,self.cut]
-			else:
-				self.Y = fk[:,self.cut]
+		self.X = self.Y = self.p.pdist['axes']
+		self.Z = self.p.pdist[self.key]
 
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
-		if not self.p.field:  return
-		title = self.cut_dir + '= ' + str(self.C[self.cut])
-		title += ', t='+str(self.p.time)
-		if self.cut_dir == 'x':
-			Lx = 'Z (de)'
+		title = self.key
+		if self.key in ['fxy','zcut']:
+			Lx = 'X'
+			Ly = 'Y'
+		elif self.key in ['fxz','ycut']:
+			Lx = 'X'
+			Ly = 'Z'
+		elif self.key in ['fyz','xcut']:
+			Lx = 'Y'
+			Ly = 'Z'
 		else:
-			Lx = 'X (de)'
-		Ly = self.p.fkey.title()
-		if self.p.fkey in self.p.field.singlelist:
-			N = 1
-		else:
-			N = 4
+			Lx = ''
+			Ly = ''
+		N = 4
 		self.status_message('Drawing')
-		self.disp.draw(N, title, Lx, Ly, self.X, self.Y)
+		self.disp.draw(N, title, Lx, Ly, self.X, self.Y, self.Z)
 		self.status_message('Done')

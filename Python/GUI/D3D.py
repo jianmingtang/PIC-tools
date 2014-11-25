@@ -14,18 +14,17 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import wx
 import matplotlib
 matplotlib.use('wxAgg')
 from matplotlib.backends.backend_wxagg import \
 	FigureCanvasWxAgg as FigCanvas, \
 	NavigationToolbar2WxAgg as NavigationToolbar
-from mplFig import Figure2D
+from mplFig import Figure3D
 import PIC
 
 
-class PanelF2DDisp(wx.Panel):
+class PanelD3DDisp(wx.Panel):
 	""" Display Panel and PIC data
 		* Figure Canvas
 		* Navigation Toolbar
@@ -35,7 +34,7 @@ class PanelF2DDisp(wx.Panel):
 
         # Create a Figure and a FigCanvas
 	#
-		self.fig = Figure2D()
+		self.fig = Figure3D()
 		self.canvas = FigCanvas(self, -1, self.fig)
 
         # Create the navigation toolbar, tied to the canvas
@@ -49,14 +48,11 @@ class PanelF2DDisp(wx.Panel):
 		sizer.Add(self.toolbar, 0)
 		self.SetSizerAndFit(sizer)
        
-	def draw(self, N, title, Lx, Ly, X, Y, Z, U, V):
-		if N == 1:
-			self.fig.draw_one(title, Lx, Ly, X, Y, Z, U, V)
-		else:
-			self.fig.draw_quad(title, Lx, Ly, [X]*4, [Y]*4, Z, U, V)
+	def draw(self, title, Lx, Ly, Lz, X, Y, Z, f, iso):
+		self.fig.draw_one(title, Lx, Ly, Lz, X, Y, Z, f, iso)
 
 
-class PanelF2DCtrl(wx.Panel):
+class PanelD3DCtrl(wx.Panel):
 	""" Control Panel
 		* Radio Box: select a field
 		* Text Ctrl: time
@@ -73,38 +69,35 @@ class PanelF2DCtrl(wx.Panel):
 
 	# Create a Radio Box for field keys
 	#
-		fkeylist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
-				'pxx','pyy','pzz','pxy','pxz','pyz','dns']
-		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
-				choices = fkeylist, majorDimension = 3,
-				style = wx.RA_SPECIFY_COLS)
+#		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
+#				choices = self.p.fieldlist,
+#				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
 
 	# flags for Text Control
 	#
 		flags = wx.ALIGN_CENTER | wx.ALIGN_CENTER_VERTICAL | wx.ALL
 
-	# Create a Text Control to modify time
+	# Create a Text Control to show isovalue
 	#
-		st_time = wx.StaticText(self, label = 'Time:')
-		self.tc_time = wx.TextCtrl(self)
-		sizer_time = wx.BoxSizer(wx.HORIZONTAL)
-		sizer_time.Add(st_time, 0, flags)
-		sizer_time.Add(self.tc_time, 0, flags)
+		st_iso = wx.StaticText(self, label = 'isovalue:')
+		self.tc_iso = wx.TextCtrl(self)
+		sizer_iso = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_iso.Add(st_iso, 0, flags)
+		sizer_iso.Add(self.tc_iso, 0, flags)
 
-	# Create a Toggle Button to add magnetic field lines
-	#
-		self.tb_stream = wx.ToggleButton(self,
-				label = 'Magnetic Field Line')
+		self.slr_iso = wx.Slider(self, value = self.p.iso,
+				size = (150,-1), minValue = 0, maxValue = 1,
+				style = wx.SL_HORIZONTAL | wx.SL_LABELS)
 
 	# Create a Text Control to modify range
 	#
 		st_range_label = wx.StaticText(self, label = 'Drawing Range:')
 		st_range = [ wx.StaticText(self, label = i+j) \
-			for i in ['x','z'] for j in ['min:','max:'] ]
+			for i in ['x','y','z'] for j in ['min:','max:'] ]
 		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
-			for i in range(4)]
-		sizer_range = wx.GridSizer(rows=4, cols=2)
-		for i in range(4):
+			for i in range(6)]
+		sizer_range = wx.GridSizer(rows=6, cols=2)
+		for i in range(6):
 			sizer_range.Add(st_range[i], 0, flags)
 			sizer_range.Add(self.tc_range[i], 0, flags)
 
@@ -120,33 +113,28 @@ class PanelF2DCtrl(wx.Panel):
 	#
 		pad = 3
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.Add(self.rb_fkey, 0, flags, pad)
-		sizer.Add(sizer_time, 0, flags, pad)
+#		sizer.Add(self.rb_fkey, 0, flags, pad)
+		sizer.Add(sizer_iso, 0, flags, pad)
+		sizer.Add(self.slr_iso, 0, flags, pad)
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
 		sizer.Add(st_range_label, 0, flags)
 		sizer.Add(sizer_range, 0, flags, pad)
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
-		sizer.Add(self.tb_stream, 0, flags, pad)
 		sizer.Add(sizer_refresh, 0, flags, pad)
 		self.SetSizerAndFit(sizer)
 
-	def update_rb_list(self, s):
-		""" Reset the rb list according to the info in data file
-		"""
-		for i, j in enumerate(self.p.fieldlist):
-			if not j in s:
-				self.rb_fkey.EnableItem(i, False)
 
-
-class PanelF2D(wx.Panel):
-	""" F2D Panel (Controller)
+class PanelD3D(wx.Panel):
+	""" D3D Panel (Controller)
 	"""
-	fieldlist = ['Bx','By','Bz','Ex','Ey','Ez','vxs','vys','vzs',
-		'pxx','pyy','pzz','pxy','pxz','pyz','dns']
+# control variables
+#
+	grid = 101
+	iso = 0.2
 
 # data
 #
-	field = None
+	pdist = None
 
 	def __init__(self, parent, *args, **kwargs):
 		wx.Panel.__init__(self, parent, *args, **kwargs)
@@ -157,8 +145,8 @@ class PanelF2D(wx.Panel):
 
 	# Add a control Panel and a display Panel
 	#
-		self.ctrl = PanelF2DCtrl(self)
-		self.disp = PanelF2DDisp(self)
+		self.ctrl = PanelD3DCtrl(self)
+		self.disp = PanelD3DDisp(self)
 
 	# Sizer and Fit
 	#
@@ -170,108 +158,74 @@ class PanelF2D(wx.Panel):
 	# Load data from file
 	#
 		self.load_data()
+		self.set_range()
 
-	# Set fkey and Draw
+	# Draw
 	#
-		self.on_rb_fkey(None)
+		self.on_btn_draw(None)
 
 	# Bind to control Panel events
 	#
-		self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey,
-				self.ctrl.rb_fkey)
-		self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream,
-				self.ctrl.tb_stream)
+#		self.Bind(wx.EVT_RADIOBOX, self.on_rb_key,
+#				self.ctrl.rb_key)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
 				self.ctrl.btn_load)
 		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
 				self.ctrl.btn_draw)
 
 	def load_data(self):
-		""" Update field if the file is valid
+		""" Update pdist if the file is valid
 		"""
 		if not self.p.pathname: return
 
 		f = self.p.pathname
 		try:
 			self.p.status_message('Loading')
-			self.field = PIC.FieldNASA(f)
+			self.pdist = PIC.DistNASA(f, self.grid)
 			self.p.status_message('Done')
 		except:
 			self.p.status_message('Error: Load Fail!')
-			self.field = None
-		if self.field:
+			self.pdist = None
+		if self.pdist:
 			self.p.status_message('Loaded ' + f)
-			head, tail = os.path.split(f)
-			self.time = tail[7:12].lstrip('0')
-			self.ctrl.tc_time.SetValue(self.time)
-			self.set_range()
-			self.ctrl.update_rb_list(self.field.fieldlist)
 
 	def set_range(self):
 		""" Reset the grid range
 		"""
-		nx = self.field.data['nnx']
-		nz = self.field.data['nnz']
-		self.ctrl.tc_range[0].SetRange(0, nx)
-		self.ctrl.tc_range[1].SetRange(0, nx)
-		self.ctrl.tc_range[2].SetRange(0, nz)
-		self.ctrl.tc_range[3].SetRange(0, nz)
-		# Set the upper bound only if it is zero.
-		if self.ctrl.tc_range[1].GetValue() == 0:
-			self.ctrl.tc_range[1].SetValue(nx)
-		if self.ctrl.tc_range[3].GetValue() == 0:
-			self.ctrl.tc_range[3].SetValue(nz)
-
-	def on_rb_fkey(self, event):
-		""" Change the field key
-		"""
-		self.fkey = self.ctrl.rb_fkey.GetItemLabel(
-				self.ctrl.rb_fkey.GetSelection())
-		self.on_btn_draw(event)
-
-	def on_tb_stream(self, event):
-		""" Toggle stream lines
-		"""
-		self.on_btn_draw(event)
+		for i in range(6):
+			self.ctrl.tc_range[i].SetRange(0, self.grid)
+		for i in range(3):
+			self.ctrl.tc_range[i+i].SetValue(0)
+			self.ctrl.tc_range[i+i+1].SetValue(self.grid)
 
 	def on_btn_load(self, event):
 		""" Load the data
 		"""
-#		time = self.ctrl.tc_time.GetValue()
-#		self.p.filename = 'fields-' + time.zfill(5) + '.dat'
 		self.p.get_path_from_dirctrl(None)
 		self.load_data()
 
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
-		if not self.field:
+		if not self.pdist:
 			dlg = wx.MessageDialog(self, 'Load Data First!',
 					'Error', wx.ICON_ERROR)
 			dlg.ShowModal()
 			dlg.Destroy()
 			return
 
-		title = self.fkey.title() + ', t=' + str(self.time)
-		r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
-		if r[0] >= r[1] or r[2] >= r[3] or min(r) < 0:
+		r = [self.ctrl.tc_range[i].GetValue() for i in range(6)]
+		if r[0] >= r[1] or r[2] >= r[3] or r[4] >= r[5] or min(r) < 0:
 			r = None
 		else:
-			self.field.truncate(r)
-		Lx = 'X (de)'
-		Ly = 'Z (de)'
-		X = self.field['xe']
-		Y = self.field['ze']
-		Z = self.field[self.fkey]
-		if self.ctrl.tb_stream.GetValue():
-			U = self.field['Bx']
-			V = self.field['Bz']
-		else:
-			U = V = None
-		if self.fkey in self.field.singlelist:
-			N = 1
-		else:
-			N = 4
+			self.pdist.truncate(r)
+		title = 'f(V)'
+		Lx = 'Vx'
+		Ly = 'Vy'
+		Lz = 'Vz'
+		X = Y = Z = self.pdist['axes'][0]
+		f = self.pdist['fxyz'][1].transpose()
+		iso = max(f.ravel()) * self.iso
 		self.p.status_message('Drawing')
-		self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
+		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f, iso)
 		self.p.status_message('Done')

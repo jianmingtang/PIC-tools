@@ -22,7 +22,6 @@
 import os
 import wx
 #from wx.lib.pubsub import pub
-import PIC
 import GUI
 
 
@@ -261,9 +260,9 @@ class PanelD3D(wx.Panel):
 		else:
 			self.pdist.truncate(r)
 		title = 'f(v)'
-		Lx = 'X'
-		Ly = 'Y'
-		Lz = 'Z'
+		Lx = 'Vx'
+		Ly = 'Vy'
+		Lz = 'vz'
 		X = Y = Z = self.pdist['axes'][0]
 		f = self.pdist['fxyz'][1].transpose()
 		iso = max(f.ravel()) * self.iso
@@ -465,7 +464,7 @@ class MainFrame(wx.Frame):
 	def on_frame_F2D(self, event):
 		if not self.pathname:
 			self.on_file_open(None)
-		self.replace_panel(PanelF2D(self))
+		self.replace_panel(GUI.PanelF2D(self))
 		self.SetTitle(self.menu.labelF2D)
 		self.menu.frame_F2D.Enable(False)
 		self.menu.frame_F1D.Enable(True)
@@ -479,7 +478,7 @@ class MainFrame(wx.Frame):
 	def on_frame_D3D(self, event):
 		if not self.pathname:
 			self.on_file_open(None)
-		self.replace_panel(PanelD3D(self))
+		self.replace_panel(GUI.PanelD3D(self))
 		self.SetTitle(self.menu.labelD3D)
 		self.menu.frame_F2D.Enable(True)
 		self.menu.frame_F1D.Enable(False)
