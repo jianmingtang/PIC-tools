@@ -462,8 +462,9 @@ class MainFrame(wx.Frame):
 		self.Destroy()
 
 	def on_frame_F2D(self, event):
-		if not self.pathname:
-			self.on_file_open(None)
+		""" Replace panel for Field 2D plot
+		"""
+		self.on_file_open(None)
 		self.replace_panel(GUI.PanelF2D(self))
 		self.SetTitle(self.menu.labelF2D)
 		self.menu.frame_F2D.Enable(False)
@@ -472,12 +473,15 @@ class MainFrame(wx.Frame):
 		self.menu.frame_D2D.Enable(False)
 
 	def on_frame_F1D(self, event):
+		""" Open a new sub frame for Field 1D plot
+		"""
 		frame = GUI.FrameF1D(self.panel, title = self.menu.labelF1D)
 		frame.Show()
 
 	def on_frame_D3D(self, event):
-		if not self.pathname:
-			self.on_file_open(None)
+		""" Replace panel for Distribution 3D plot
+		"""
+		self.on_file_open(None)
 		self.replace_panel(GUI.PanelD3D(self))
 		self.SetTitle(self.menu.labelD3D)
 		self.menu.frame_F2D.Enable(True)
@@ -486,6 +490,8 @@ class MainFrame(wx.Frame):
 		self.menu.frame_D2D.Enable(True)
 
 	def on_frame_D2D(self, event):
+		""" Open a new sub frame for Distribution 2D plot
+		"""
 		frame = GUI.FrameD2D(self.panel, title = self.menu.labelD2D)
 		frame.Show()
 

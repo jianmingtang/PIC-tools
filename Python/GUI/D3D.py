@@ -67,11 +67,12 @@ class PanelD3DCtrl(wx.Panel):
 	#
 		self.p = parent
 
-	# Create a Radio Box for field keys
+	# Create a Radio Box for plot type
 	#
-#		self.rb_fkey = wx.RadioBox(self, label = 'Select a field',
-#				choices = self.p.fieldlist,
-#				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
+		plotlist = ['sp0','sp1','sp2','sp3','0+2','1+3']
+		self.rb_plot = wx.RadioBox(self, label = 'Select a plot',
+				choices = plotlist,
+				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
 
 	# flags for Text Control
 	#
@@ -86,7 +87,7 @@ class PanelD3DCtrl(wx.Panel):
 		sizer_iso.Add(self.tc_iso, 0, flags)
 
 		self.slr_iso = wx.Slider(self, value = self.p.iso,
-				size = (150,-1), minValue = 0, maxValue = 1,
+				size = (150,-1), minValue = 10, maxValue = 90,
 				style = wx.SL_HORIZONTAL | wx.SL_LABELS)
 
 	# Create a Text Control to modify range
@@ -96,6 +97,8 @@ class PanelD3DCtrl(wx.Panel):
 			for i in ['x','y','z'] for j in ['min:','max:'] ]
 		self.tc_range = [wx.SpinCtrl(self,size=(80,-1)) 
 			for i in range(6)]
+		for i in range(2,6):
+			self.tc_range[i].Enable(False)
 		sizer_range = wx.GridSizer(rows=6, cols=2)
 		for i in range(6):
 			sizer_range.Add(st_range[i], 0, flags)
@@ -113,7 +116,7 @@ class PanelD3DCtrl(wx.Panel):
 	#
 		pad = 3
 		sizer = wx.BoxSizer(wx.VERTICAL)
-#		sizer.Add(self.rb_fkey, 0, flags, pad)
+		sizer.Add(self.rb_plot, 0, flags, pad)
 		sizer.Add(sizer_iso, 0, flags, pad)
 		sizer.Add(self.slr_iso, 0, flags, pad)
 		sizer.Add(wx.StaticLine(self), 0, flags|wx.EXPAND, pad)
@@ -130,7 +133,8 @@ class PanelD3D(wx.Panel):
 # control variables
 #
 	grid = 101
-	iso = 0.2
+	iso = 20
+	plot = 0
 
 # data
 #
@@ -166,12 +170,10 @@ class PanelD3D(wx.Panel):
 
 	# Bind to control Panel events
 	#
-#		self.Bind(wx.EVT_RADIOBOX, self.on_rb_key,
-#				self.ctrl.rb_key)
-		self.Bind(wx.EVT_BUTTON, self.on_btn_load,
-				self.ctrl.btn_load)
-		self.Bind(wx.EVT_BUTTON, self.on_btn_draw,
-				self.ctrl.btn_draw)
+		self.Bind(wx.EVT_RADIOBOX, self.on_rb_plot, self.ctrl.rb_plot)
+		self.Bind(wx.EVT_SCROLL, self.on_slr_iso, self.ctrl.slr_iso)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_load, self.ctrl.btn_load)
+		self.Bind(wx.EVT_BUTTON, self.on_btn_draw, self.ctrl.btn_draw)
 
 	def load_data(self):
 		""" Update pdist if the file is valid
@@ -198,6 +200,14 @@ class PanelD3D(wx.Panel):
 			self.ctrl.tc_range[i+i].SetValue(0)
 			self.ctrl.tc_range[i+i+1].SetValue(self.grid)
 
+	def on_rb_plot(self, event):
+		self.plot = self.ctrl.rb_plot.GetSelection()
+
+	def on_slr_iso(self, event):
+		""" Set iso percentage
+		"""
+		self.iso = self.ctrl.slr_iso.GetValue()
+
 	def on_btn_load(self, event):
 		""" Load the data
 		"""
@@ -223,9 +233,18 @@ class PanelD3D(wx.Panel):
 		Lx = 'Vx'
 		Ly = 'Vy'
 		Lz = 'Vz'
-		X = Y = Z = self.pdist['axes'][0]
-		f = self.pdist['fxyz'][1].transpose()
-		iso = max(f.ravel()) * self.iso
+		if self.plot < 4:
+			X = Y = Z = self.pdist['axes'][self.plot]
+			f = self.pdist['fxyz'][self.plot]
+		elif self.plot == 4:
+			X = Y = Z = self.pdist['axes'][0]
+			f = self.pdist['fxyz'][0]+self.pdist['fxyz'][2]
+		elif self.plot == 5:
+			X = Y = Z = self.pdist['axes'][1]
+			f = self.pdist['fxyz'][1]+self.pdist['fxyz'][3]
+		print f.shape
+		iso = max(f.ravel()) * self.iso / 100
+		self.ctrl.tc_iso.SetValue(str(iso))
 		self.p.status_message('Drawing')
-		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f, iso)
+		self.disp.draw(title, Lx, Ly, Lz, X, Y, Z, f.transpose(), iso)
 		self.p.status_message('Done')
