@@ -181,6 +181,8 @@ class FrameF1D(wx.Frame):
         else:
             self.X = self.p.field['xe']
             self.C = self.p.field['ze']
+        if self.p.ctrl.tb_scale.GetValue():
+            self.X = self.X.copy() / self.p.smi
         self.ctrl.slr_cut.SetMax(len(self.C) - 1)
 
         if self.p.fkey in self.p.field.quadlist:
@@ -207,7 +209,6 @@ class FrameF1D(wx.Frame):
             Lx = 'X'
         if self.p.ctrl.tb_scale.GetValue():
             title += '  (MHD)'
-            self.X = self.X.copy() / self.p.smi
             Lx += ' (di)'
         else:
             Lx += ' (de)'
