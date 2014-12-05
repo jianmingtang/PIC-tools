@@ -16,6 +16,7 @@
 
 import os
 import wx
+from math import sqrt
 import matplotlib
 matplotlib.use('wxAgg')
 from matplotlib.backends.backend_wxagg import \
@@ -106,8 +107,11 @@ class PanelF2DCtrl(wx.Panel):
 
     # Create a Toggle Button to add magnetic field lines
     #
-        self.tb_stream = wx.ToggleButton(self,
-                                         label='Magnetic Field Line')
+        self.tb_stream = wx.ToggleButton(self, label='Magnetic Field Line')
+
+    # Create a Toggle Button to use MHD units
+    #
+        self.tb_scale = wx.ToggleButton(self, label='MHD units')
 
     # Create a Text Control to modify range
     #
@@ -140,6 +144,7 @@ class PanelF2DCtrl(wx.Panel):
         sizer.Add(sizer_range, 0, flags, pad)
         sizer.Add(wx.StaticLine(self), 0, flags | wx.EXPAND, pad)
         sizer.Add(self.tb_stream, 0, flags, pad)
+        sizer.Add(self.tb_scale, 0, flags, pad)
         sizer.Add(sizer_refresh, 0, flags, pad)
         self.SetSizerAndFit(sizer)
 
@@ -158,6 +163,7 @@ class PanelF2D(wx.Panel):
 
 # data
 #
+    smi = 1
     field = None
 
     def __init__(self, parent, *args, **kwargs):
@@ -191,6 +197,7 @@ class PanelF2D(wx.Panel):
     #
         self.Bind(wx.EVT_RADIOBOX, self.on_rb_fkey, self.ctrl.rb_fkey)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_stream, self.ctrl.tb_stream)
+        self.Bind(wx.EVT_TOGGLEBUTTON, self.on_tb_scale, self.ctrl.tb_scale)
         self.Bind(wx.EVT_BUTTON, self.on_btn_load, self.ctrl.btn_load)
         self.Bind(wx.EVT_BUTTON, self.on_btn_draw, self.ctrl.btn_draw)
 
@@ -214,7 +221,7 @@ class PanelF2D(wx.Panel):
             self.time = tail[7:12].lstrip('0')
             self.ctrl.tc_time.SetValue(self.time)
             self.set_range()
-#            self.ctrl.update_rb_list(self.field.fieldlist)
+            self.smi = sqrt(self.field.data['mass'][0])
 
     def set_range(self):
         """ Reset the grid range
@@ -243,6 +250,11 @@ class PanelF2D(wx.Panel):
         """
         self.on_btn_draw(event)
 
+    def on_tb_scale(self, event):
+        """ Toggle MHD units
+        """
+        self.on_btn_draw(event)
+
     def on_btn_load(self, event):
         """ Load the data
         """
@@ -252,10 +264,23 @@ class PanelF2D(wx.Panel):
         self.load_data()
 
     def dni(self):
-            return self.field['dns'][0] + self.field['dns'][2]
+        return self.field['dns'][0] + self.field['dns'][2]
 
     def dne(self):
-            return self.field['dns'][1] + self.field['dns'][3]
+        return self.field['dns'][1] + self.field['dns'][3]
+
+    def scaling(self):
+        wpewce = self.field.data['wpewce']
+        if self.fkey[0] == 'B':
+            return wpewce
+        if self.fkey[0] == 'E':
+            return wpewce**2 * self.smi
+        elif self.fkey[0] == 'j':
+            return wpewce * self.smi
+        elif self.fkey[0] == 'p':
+            return wpewce**2
+        else:
+            return 1
 
     def on_btn_draw(self, event):
         """ Draw the figure
@@ -268,14 +293,23 @@ class PanelF2D(wx.Panel):
             return
 
         title = self.fkey + '  t=' + str(self.time)
-        title = title.replace('_',',')
+        title = title.replace('_', ',')
         if title[0] != 'n':
             title = title[0].upper() + title[1:]
         r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
+        # temp fix of unphysical pressure near the boundaries
+        if self.fkey[0] == 'p':
+            if r[0] < 1:
+                r[0] = 1
+                self.ctrl.tc_range[0].SetValue(1)
+            if r[2] < 1:
+                r[2] = 1
+                self.ctrl.tc_range[2].SetValue(1)
+        # check range (no check for maximum)
         if r[0] < r[1] and r[2] < r[3] and min(r) >= 0:
             self.field.truncate(r)
-        Lx = 'X (de)'
-        Ly = 'Z (de)'
+        Lx = 'X'
+        Ly = 'Z'
         X = self.field['xe']
         Y = self.field['ze']
         if self.fkey == 'n_i':
@@ -313,6 +347,16 @@ class PanelF2D(wx.Panel):
             V = self.field['Bz']
         else:
             U = V = None
+        if self.ctrl.tb_scale.GetValue():
+            self.Z = self.Z.copy() * self.scaling()
+            X = X.copy() / self.smi
+            Y = Y.copy() / self.smi
+            title += '  (MHD)'
+            Lx += ' (di)'
+            Ly += ' (di)'
+        else:
+            Lx += ' (de)'
+            Ly += ' (de)'
         if self.fkey in self.field.quadlist:
             N = 4
         else:

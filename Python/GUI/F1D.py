@@ -202,10 +202,16 @@ class FrameF1D(wx.Frame):
         title = self.cut_dir + '= ' + str(self.C[self.cut])
         title += ', t=' + str(self.p.time)
         if self.cut_dir == 'x':
-            Lx = 'Z (de)'
+            Lx = 'Z'
         else:
-            Lx = 'X (de)'
-        Ly = self.p.fkey.replace('_',',')
+            Lx = 'X'
+        if self.p.ctrl.tb_scale.GetValue():
+            title += '  (MHD)'
+            self.X = self.X.copy() / self.p.smi
+            Lx += ' (di)'
+        else:
+            Lx += ' (de)'
+        Ly = self.p.fkey.replace('_', ',')
         if Ly[0] != 'n':
             Ly = Ly[0].upper() + Ly[1:]
         if self.p.fkey in self.p.field.quadlist:
