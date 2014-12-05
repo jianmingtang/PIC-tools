@@ -265,15 +265,15 @@ class PanelF2D(wx.Panel):
         X = self.field['xe']
         Y = self.field['ze']
         if self.fkey == 'dni':
-            Z = self.field['dns'][0] + self.field['dns'][2]
+            self.Z = self.field['dns'][0] + self.field['dns'][2]
         elif self.fkey == 'dne':
-            Z = self.field['dns'][1] + self.field['dns'][3]
+            self.Z = self.field['dns'][1] + self.field['dns'][3]
         elif self.fkey in ['jix', 'jiy', 'jiz']:
             key = 'v' + self.fkey[-1] + 's'
-            Z = self.field[key][0] + self.field[key][2]
+            self.Z = self.field[key][0] + self.field[key][2]
         elif self.fkey in ['jex', 'jey', 'jez']:
             key = 'v' + self.fkey[-1] + 's'
-            Z = self.field[key][1] + self.field[key][3]
+            self.Z = self.field[key][1] + self.field[key][3]
         elif self.fkey in ['pxxi', 'pyyi', 'pzzi', 'pxyi', 'pxzi', 'pyzi']:
             key = self.fkey[:-1]
             key1 = 'v' + self.fkey[1] + 's'
@@ -281,7 +281,7 @@ class PanelF2D(wx.Panel):
             j1 = self.field[key1][0] + self.field[key1][2]
             j2 = self.field[key2][0] + self.field[key2][2]
             dn = self.field['dns'][0] + self.field['dns'][2]
-            Z = (self.field[key][0] + self.field[key][2] - j1 * j2 / dn) \
+            self.Z = (self.field[key][0] + self.field[key][2] - j1 * j2 / dn) \
                 * self.field.data['mass'][0]
         elif self.fkey in ['pxxe', 'pyye', 'pzze', 'pxye', 'pxze', 'pyze']:
             key = self.fkey[:-1]
@@ -290,10 +290,10 @@ class PanelF2D(wx.Panel):
             j1 = self.field[key1][1] + self.field[key1][3]
             j2 = self.field[key2][1] + self.field[key2][3]
             dn = self.field['dns'][1] + self.field['dns'][3]
-            Z = (self.field[key][1] + self.field[key][3] - j1 * j2 / dn) \
+            self.Z = (self.field[key][1] + self.field[key][3] - j1 * j2 / dn) \
                 * self.field.data['mass'][1]
         else:
-            Z = self.field[self.fkey]
+            self.Z = self.field[self.fkey]
         if self.ctrl.tb_stream.GetValue():
             U = self.field['Bx']
             V = self.field['Bz']
@@ -302,7 +302,8 @@ class PanelF2D(wx.Panel):
         if self.fkey in self.field.quadlist:
             N = 4
         else:
+        # assuming all processed data only needs a single panel
             N = 1
         self.p.status_message('Drawing')
-        self.disp.draw(N, title, Lx, Ly, X, Y, Z, U, V)
+        self.disp.draw(N, title, Lx, Ly, X, Y, self.Z, U, V)
         self.p.status_message('Done')
