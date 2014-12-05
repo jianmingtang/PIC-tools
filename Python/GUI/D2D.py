@@ -108,7 +108,6 @@ class FrameD2D(wx.Frame):
 	cut_dir = 'x'
 	cut = 0
 	X = Y = C = None
-	key = 'fxy'
 	def __init__(self, parent, *args, **kwargs):
 		""" Create the Main Frame
 		"""
@@ -137,6 +136,10 @@ class FrameD2D(wx.Frame):
 		sizer.Add(self.ctrl, 0)
 		self.SetSizerAndFit(sizer)
 
+	# Initialize key and Draw
+	#
+		self.on_rb_key(None)
+
 	# Bind to control Panel events
 	#
 		self.Bind(wx.EVT_RADIOBOX, self.on_rb_key, self.ctrl.rb_key)
@@ -156,6 +159,9 @@ class FrameD2D(wx.Frame):
 		"""
 		self.key = self.ctrl.rb_key.GetItemLabel(
 				self.ctrl.rb_key.GetSelection())
+		if self.key in ['xcut','ycut','zcut']:
+			cut_range = [self.key[0],40,60]
+			self.p.pdist.cut(cut_range)
 		self.on_btn_apply(event)
 		self.on_btn_draw(event)
 
@@ -170,25 +176,31 @@ class FrameD2D(wx.Frame):
 		""" Apply settings
 		"""
 		self.X = self.Y = self.p.pdist['axes']
-		self.Z = self.p.pdist[self.key]
 
 	def on_btn_draw(self, event):
 		""" Draw the figure
 		"""
 		title = self.key
 		if self.key in ['fxy','zcut']:
-			Lx = 'X'
-			Ly = 'Y'
+			Lx = 'Vx'
+			Ly = 'Vy'
 		elif self.key in ['fxz','ycut']:
-			Lx = 'X'
-			Ly = 'Z'
+			Lx = 'Vx'
+			Ly = 'Vz'
 		elif self.key in ['fyz','xcut']:
-			Lx = 'Y'
-			Ly = 'Z'
+			Lx = 'Vy'
+			Ly = 'Vz'
 		else:
 			Lx = ''
 			Ly = ''
-		N = 4
+		if self.p.plot < 4:
+			N = 4
+			if self.key in ['fxy','fxz','fyz']:
+				self.Z = self.p.pdist[self.key]
+			else:
+				self.Z = self.p.pdist[self.key.lstrip('xyz')]
+		else:
+			N = 1
 		self.status_message('Drawing')
 		self.disp.draw(N, title, Lx, Ly, self.X, self.Y, self.Z)
 		self.status_message('Done')

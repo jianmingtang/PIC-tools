@@ -52,18 +52,20 @@ class DistNASA:
 		return self.data_t[key]
 
 	def __str__(self):
-		""" This is broken due to truncation
+		"""
 		"""
 		s = '\n'
 		s += 'Bin location: '
 		s += 'x=(%4g,%4g), z=(%4g,%4g)\n' % (
-			self['xlo'],self['xhi'],self['zlo'],self['zhi'])
+			self.data['xlo'], self.data['xhi'],
+			self.data['zlo'], self.data['zhi'])
+# This is broken due to truncation
 # This is hard coded to species 1
-		s += '(Hard coded) Axes max: %4g\n' % self['axes'][1][-1]
-		s += '\n'
-		for i in range(self.nss):
-			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
-				self['vxa'][i], self['vya'][i], self['vza'][i])
+#		s += '(Hard coded) Axes max: %4g\n' % self['axes'][1][-1]
+#		s += '\n'
+#		for i in range(self.nss):
+#			s += 'v['+str(i)+'] = ({0:g}, {1:g}, {2:g})\n'.format(
+#				self['vxa'][i], self['vya'][i], self['vza'][i])
 		return s
 
 	def truncate(self, r):
@@ -75,6 +77,10 @@ class DistNASA:
                         self.data_t[k] = self.data[k][:,b:e,b:e]
                 self.data_t['fxyz'] = self.data['fxyz'][:,b:e,b:e,b:e]
 		self.data_t['axes'] = self.data['axes'][:,b:e]
+#		print help(dict(self.data))
+#		print self.data.has_key('cut')
+#		if self.data.has_key('cut'):
+#			self.data_t['cut'] = self.data['cut'][:,b:e,b:e]
 
 	def cut(self, p):
 		"""
@@ -98,6 +104,7 @@ class DistNASA:
 				self.dataCUT += A[:,i,:,:]
 		else:
 			raise IndexError
+		self.data['cut'] = self.dataCUT
 
 	def _check_add(self, sps):
 		# Check the ranges of velocities are consistent.

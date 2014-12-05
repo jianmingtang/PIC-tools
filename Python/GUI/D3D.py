@@ -54,10 +54,8 @@ class PanelD3DDisp(wx.Panel):
 
 class PanelD3DCtrl(wx.Panel):
 	""" Control Panel
-		* Radio Box: select a field
-		* Text Ctrl: time
-		* Button: magnetic field lines
-		* Text Ctrl: grid range
+		* Radio Box: select a plot
+		* Text Ctrl: angles
 		* Buttons: load data, draw figure
 	"""
 	def __init__(self, parent, *args, **kwargs):
@@ -69,7 +67,7 @@ class PanelD3DCtrl(wx.Panel):
 
 	# Create a Radio Box for plot type
 	#
-		plotlist = ['sp0','sp1','sp2','sp3','0+2','1+3']
+		plotlist = ['io1','el1','io2','el2','ion','ele']
 		self.rb_plot = wx.RadioBox(self, label = 'Select a plot',
 				choices = plotlist,
 				majorDimension = 3, style = wx.RA_SPECIFY_COLS)
@@ -109,7 +107,7 @@ class PanelD3DCtrl(wx.Panel):
 		st_elev = wx.StaticText(self, label = 'elevation:')
 		st_azim = wx.StaticText(self, label = 'azimuth:')
 		self.sc_elev = wx.SpinCtrl(self, min=-90, max=90, initial=20)
-		self.sc_azim = wx.SpinCtrl(self, min=0, max=360, initial=40)
+		self.sc_azim = wx.SpinCtrl(self, min=-179, max=180, initial=40)
 		sizer_view = wx.BoxSizer(wx.VERTICAL)
 		sizer_view.Add(st_elev, 0, flags)
 		sizer_view.Add(self.sc_elev, 0, flags)
@@ -148,7 +146,6 @@ class PanelD3D(wx.Panel):
 #
 	grid = 101
 	iso = 20
-	plot = 0
 
 # data
 #
@@ -178,9 +175,9 @@ class PanelD3D(wx.Panel):
 		self.load_data()
 		self.set_range()
 
-	# Draw
+	# Initialize key and Draw
 	#
-		self.on_btn_draw(None)
+		self.on_rb_plot(None)
 
 	# Bind to control Panel events
 	#
@@ -216,6 +213,7 @@ class PanelD3D(wx.Panel):
 
 	def on_rb_plot(self, event):
 		self.plot = self.ctrl.rb_plot.GetSelection()
+		self.on_btn_draw(None)
 
 	def on_slr_iso(self, event):
 		""" Set iso percentage
@@ -243,7 +241,10 @@ class PanelD3D(wx.Panel):
 			r = None
 		else:
 			self.pdist.truncate(r)
-		title = 'f(V)'
+		location = 'x=(%4g,%4g), z=(%4g,%4g)\n' % (
+			self.pdist.data['xlo'], self.pdist.data['xhi'],
+			self.pdist.data['zlo'], self.pdist.data['zhi'])
+		title = 'f(V), ' + location
 		Lx = 'Vx'
 		Ly = 'Vy'
 		Lz = 'Vz'
