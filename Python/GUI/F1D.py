@@ -205,11 +205,13 @@ class FrameF1D(wx.Frame):
             Lx = 'Z (de)'
         else:
             Lx = 'X (de)'
-        Ly = self.p.fkey.title()
+        Ly = self.p.fkey.replace('_',',')
+        if Ly[0] != 'n':
+            Ly = Ly[0].upper() + Ly[1:]
         if self.p.fkey in self.p.field.quadlist:
             N = 4
         else:
-        # assuming all processed data only needs a single panel
+            # assuming all processed data only needs a single panel
             N = 1
         self.status_message('Drawing')
         self.disp.draw(N, title, Lx, Ly, self.X, self.Y)

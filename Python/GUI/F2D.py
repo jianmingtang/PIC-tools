@@ -77,12 +77,17 @@ class PanelF2DCtrl(wx.Panel):
 
     # Create a Radio Box for field keys
     #
+        self.jlist = ['jx', 'jy', 'jz']
+        self.jilist = [s + '_i' for s in self.jlist]
+        self.jelist = [s + '_e' for s in self.jlist]
+        self.plist = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
+        self.pilist = [s + '_i' for s in self.plist]
+        self.pelist = [s + '_e' for s in self.plist]
         fkeylist = ['Bx', 'By', 'Bz', 'Ex', 'Ey', 'Ez',
-                    'dns', 'dni', 'dne', 'vxs', 'vys', 'vzs',
-                    'jix', 'jiy', 'jiz', 'jex', 'jey', 'jez',
-                    'pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz',
-                    'pxxi', 'pyyi', 'pzzi', 'pxyi', 'pxzi', 'pyzi',
-                    'pxxe', 'pyye', 'pzze', 'pxye', 'pxze', 'pyze']
+                    'dns', 'n_i', 'n_e', 'vxs', 'vys', 'vzs'] \
+            + self.jilist + self.jelist \
+            + self.plist + self.pilist + self.pelist
+
         self.rb_fkey = wx.RadioBox(self, label='Select a field',
                                    choices=fkeylist, majorDimension=3,
                                    style=wx.RA_SPECIFY_COLS)
@@ -246,6 +251,12 @@ class PanelF2D(wx.Panel):
         self.p.get_path_from_dirctrl(None)
         self.load_data()
 
+    def dni(self):
+            return self.field['dns'][0] + self.field['dns'][2]
+
+    def dne(self):
+            return self.field['dns'][1] + self.field['dns'][3]
+
     def on_btn_draw(self, event):
         """ Draw the figure
         """
@@ -256,7 +267,10 @@ class PanelF2D(wx.Panel):
             dlg.Destroy()
             return
 
-        title = self.fkey.title() + ', t=' + str(self.time)
+        title = self.fkey + '  t=' + str(self.time)
+        title = title.replace('_',',')
+        if title[0] != 'n':
+            title = title[0].upper() + title[1:]
         r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
         if r[0] < r[1] and r[2] < r[3] and min(r) >= 0:
             self.field.truncate(r)
@@ -264,32 +278,32 @@ class PanelF2D(wx.Panel):
         Ly = 'Z (de)'
         X = self.field['xe']
         Y = self.field['ze']
-        if self.fkey == 'dni':
-            self.Z = self.field['dns'][0] + self.field['dns'][2]
-        elif self.fkey == 'dne':
-            self.Z = self.field['dns'][1] + self.field['dns'][3]
-        elif self.fkey in ['jix', 'jiy', 'jiz']:
-            key = 'v' + self.fkey[-1] + 's'
+        if self.fkey == 'n_i':
+            self.Z = self.dni()
+        elif self.fkey == 'n_e':
+            self.Z = self.dne()
+        elif self.fkey in self.ctrl.jilist:
+            key = 'v' + self.fkey[1] + 's'
             self.Z = self.field[key][0] + self.field[key][2]
-        elif self.fkey in ['jex', 'jey', 'jez']:
-            key = 'v' + self.fkey[-1] + 's'
+        elif self.fkey in self.ctrl.jelist:
+            key = 'v' + self.fkey[1] + 's'
             self.Z = self.field[key][1] + self.field[key][3]
-        elif self.fkey in ['pxxi', 'pyyi', 'pzzi', 'pxyi', 'pxzi', 'pyzi']:
-            key = self.fkey[:-1]
+        elif self.fkey in self.ctrl.pilist:
+            key = self.fkey[:-2]
             key1 = 'v' + self.fkey[1] + 's'
             key2 = 'v' + self.fkey[2] + 's'
             j1 = self.field[key1][0] + self.field[key1][2]
             j2 = self.field[key2][0] + self.field[key2][2]
-            dn = self.field['dns'][0] + self.field['dns'][2]
+            dn = self.dni()
             self.Z = (self.field[key][0] + self.field[key][2] - j1 * j2 / dn) \
                 * self.field.data['mass'][0]
-        elif self.fkey in ['pxxe', 'pyye', 'pzze', 'pxye', 'pxze', 'pyze']:
-            key = self.fkey[:-1]
+        elif self.fkey in self.ctrl.pelist:
+            key = self.fkey[:-2]
             key1 = 'v' + self.fkey[1] + 's'
             key2 = 'v' + self.fkey[2] + 's'
             j1 = self.field[key1][1] + self.field[key1][3]
             j2 = self.field[key2][1] + self.field[key2][3]
-            dn = self.field['dns'][1] + self.field['dns'][3]
+            dn = self.dne()
             self.Z = (self.field[key][1] + self.field[key][3] - j1 * j2 / dn) \
                 * self.field.data['mass'][1]
         else:
@@ -302,7 +316,7 @@ class PanelF2D(wx.Panel):
         if self.fkey in self.field.quadlist:
             N = 4
         else:
-        # assuming all processed data only needs a single panel
+            # assuming all processed data only needs a single panel
             N = 1
         self.p.status_message('Drawing')
         self.disp.draw(N, title, Lx, Ly, X, Y, self.Z, U, V)
