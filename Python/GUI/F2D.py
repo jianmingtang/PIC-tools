@@ -301,8 +301,8 @@ class PanelF2D(wx.Panel):
         if title[0] != 'n':
             title = title[0].upper() + title[1:]
         r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
-        # temp fix of unphysical pressure near the boundaries
-        if self.fkey[0] == 'p':
+        # temp fix of unphysical pressure/density near the boundaries
+        if self.fkey[0] in ['n','p','T']:
             if r[0] < 1:
                 r[0] = 1
                 self.ctrl.tc_range[0].SetValue(1)
