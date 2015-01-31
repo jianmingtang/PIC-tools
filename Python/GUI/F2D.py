@@ -16,6 +16,7 @@
 
 import os
 import wx
+import numpy
 from math import sqrt
 import matplotlib
 matplotlib.use('wxAgg')
@@ -84,10 +85,11 @@ class PanelF2DCtrl(wx.Panel):
         self.plist = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
         self.pilist = [s + '_i' for s in self.plist]
         self.pelist = [s + '_e' for s in self.plist]
+        self.olist = ['T_i', 'T_e']
         fkeylist = ['Bx', 'By', 'Bz', 'Ex', 'Ey', 'Ez',
                     'dns', 'n_i', 'n_e', 'vxs', 'vys', 'vzs'] \
             + self.jilist + self.jelist \
-            + self.plist + self.pilist + self.pelist
+            + self.plist + self.pilist + self.pelist + self.olist
 
         self.rb_fkey = wx.RadioBox(self, label='Select a field',
                                    choices=fkeylist, majorDimension=3,
@@ -270,6 +272,8 @@ class PanelF2D(wx.Panel):
         return self.field['dns'][1] + self.field['dns'][3]
 
     def scaling(self):
+        """ scale from electron units to ion units
+        """
         wpewce = self.field.data['wpewce']
         if self.fkey[0] == 'B':
             return wpewce
@@ -340,6 +344,30 @@ class PanelF2D(wx.Panel):
             dn = self.dne()
             self.Z = (self.field[key][1] + self.field[key][3] - j1 * j2 / dn) \
                 * self.field.data['mass'][1]
+        elif self.fkey == 'T_i':
+            keyplist = ['pxx','pyy','pzz']
+            keyjlist = ['vxs','vys','vzs']
+            dn = self.dni()
+            tmp = numpy.zeros(numpy.shape(self.field['pxx'][0]))
+            for i in range(3):
+                keyp = keyplist[i]
+                keyj = keyjlist[i]
+                jc = self.field[keyj][0] + self.field[keyj][2]
+                tmp += (self.field[keyp][0] + self.field[keyp][2] - jc*jc/dn) \
+                        * self.field.data['mass'][0]
+            self.Z = tmp / dn
+        elif self.fkey == 'T_e':
+            keyplist = ['pxx','pyy','pzz']
+            keyjlist = ['vxs','vys','vzs']
+            dn = self.dni()
+            tmp = numpy.zeros(numpy.shape(self.field['pxx'][1]))
+            for i in range(3):
+                keyp = keyplist[i]
+                keyj = keyjlist[i]
+                jc = self.field[keyj][1] + self.field[keyj][3]
+                tmp += (self.field[keyp][1] + self.field[keyp][3] - jc*jc/dn) \
+                        * self.field.data['mass'][1]
+            self.Z = tmp / dn
         else:
             self.Z = self.field[self.fkey]
         if self.ctrl.tb_stream.GetValue():
