@@ -14,6 +14,10 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#
+# TODO: scaling factors for V, T, n, ...
+#
+
 import os
 import wx
 import numpy
@@ -85,10 +89,13 @@ class PanelF2DCtrl(wx.Panel):
         self.plist = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
         self.pilist = [s + '_i' for s in self.plist]
         self.pelist = [s + '_e' for s in self.plist]
+        self.vlist = ['Vx', 'Vy', 'Vz']
+        self.vilist = [s + '_i' for s in self.vlist]
+        self.velist = [s + '_e' for s in self.vlist]
         self.olist = ['T_i', 'T_e']
         fkeylist = ['Bx', 'By', 'Bz', 'Ex', 'Ey', 'Ez',
                     'dns', 'n_i', 'n_e', 'vxs', 'vys', 'vzs'] \
-            + self.jilist + self.jelist \
+            + self.jilist + self.jelist + self.vilist + self.velist \
             + self.plist + self.pilist + self.pelist + self.olist
 
         self.rb_fkey = wx.RadioBox(self, label='Select a field',
@@ -302,7 +309,7 @@ class PanelF2D(wx.Panel):
             title = title[0].upper() + title[1:]
         r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
         # temp fix of unphysical pressure/density near the boundaries
-        if self.fkey[0] in ['n','p','T']:
+        if self.fkey[0] in ['n','p','T','V']:
             if r[0] < 1:
                 r[0] = 1
                 self.ctrl.tc_range[0].SetValue(1)
@@ -359,7 +366,7 @@ class PanelF2D(wx.Panel):
         elif self.fkey == 'T_e':
             keyplist = ['pxx','pyy','pzz']
             keyjlist = ['vxs','vys','vzs']
-            dn = self.dni()
+            dn = self.dne()
             tmp = numpy.zeros(numpy.shape(self.field['pxx'][1]))
             for i in range(3):
                 keyp = keyplist[i]
@@ -368,6 +375,14 @@ class PanelF2D(wx.Panel):
                 tmp += (self.field[keyp][1] + self.field[keyp][3] - jc*jc/dn) \
                         * self.field.data['mass'][1]
             self.Z = tmp / dn
+        elif self.fkey in self.ctrl.vilist:
+            dn = self.dni()
+            key = 'v' + self.fkey[1] + 's'
+            self.Z = (self.field[key][0] + self.field[key][2]) / dn
+        elif self.fkey in self.ctrl.velist:
+            dn = self.dne()
+            key = 'v' + self.fkey[1] + 's'
+            self.Z = -(self.field[key][1] + self.field[key][3]) / dn
         else:
             self.Z = self.field[self.fkey]
         if self.ctrl.tb_stream.GetValue():
