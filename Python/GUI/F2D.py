@@ -15,7 +15,7 @@
 
 
 #
-# TODO: scaling factors for V, T, n, ...
+# TODO: check scaling factors for V, T, n, ...
 #
 
 import os
@@ -288,8 +288,14 @@ class PanelF2D(wx.Panel):
             return wpewce**2 * self.smi
         elif self.fkey[0] == 'j':
             return wpewce * self.smi
+        elif self.fkey[0] == 'n':
+            return self.smi**2 
         elif self.fkey[0] == 'p':
             return wpewce**2
+        elif self.fkey[0] == 'T':
+            return (wpewce/self.smi)**2
+        elif self.fkey[0] == 'V':
+            return wpewce/self.smi
         else:
             return 1
 
@@ -362,7 +368,7 @@ class PanelF2D(wx.Panel):
                 jc = self.field[keyj][0] + self.field[keyj][2]
                 tmp += (self.field[keyp][0] + self.field[keyp][2] - jc*jc/dn) \
                         * self.field.data['mass'][0]
-            self.Z = tmp / dn
+            self.Z = tmp / dn / 3.
         elif self.fkey == 'T_e':
             keyplist = ['pxx','pyy','pzz']
             keyjlist = ['vxs','vys','vzs']
@@ -374,7 +380,7 @@ class PanelF2D(wx.Panel):
                 jc = self.field[keyj][1] + self.field[keyj][3]
                 tmp += (self.field[keyp][1] + self.field[keyp][3] - jc*jc/dn) \
                         * self.field.data['mass'][1]
-            self.Z = tmp / dn
+            self.Z = tmp / dn / 3.
         elif self.fkey in self.ctrl.vilist:
             dn = self.dni()
             key = 'v' + self.fkey[1] + 's'
@@ -382,7 +388,7 @@ class PanelF2D(wx.Panel):
         elif self.fkey in self.ctrl.velist:
             dn = self.dne()
             key = 'v' + self.fkey[1] + 's'
-            self.Z = -(self.field[key][1] + self.field[key][3]) / dn
+            self.Z = (self.field[key][1] + self.field[key][3]) / dn
         else:
             self.Z = self.field[self.fkey]
         if self.ctrl.tb_stream.GetValue():
