@@ -84,7 +84,7 @@ pro draw_pic, fname=fname
 
 ;
 ; Read in distribution function
-	PD = Distribution(fname, nss, grid)
+	PD = obj_new('Distribution', fname, nss, grid)
 ;
 ; Print out location	
 	PD.print
