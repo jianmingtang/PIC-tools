@@ -58,7 +58,7 @@ pro draw_3D, fxyz, iso, ax
 end
 
 pro draw_dist_2D, data, title, range
-	scale = (range[1] - range[0]) / (size(data))[1]
+	scale = (size(data))[1] / (range[1] - range[0])
 	im = image(data, title=title, font_size=20, $
 		rgb_table=13, min_value=min(data), max_value=max(data), $
 		margin=[0.12,0.12,0.2,0.1], aspect_ratio=0)
