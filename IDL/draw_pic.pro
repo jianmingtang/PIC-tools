@@ -58,17 +58,15 @@ pro draw_3D, fxyz, iso, ax
 end
 
 pro draw_dist_2D, data, title, range
-	scale = (size(data))[1] / (range[1] - range[0])
+	scale = (range[1] - range[0]) / (size(data))[1]
 	im = image(data, title=title, font_size=20, $
 		rgb_table=13, min_value=min(data), max_value=max(data), $
 		margin=[0.12,0.12,0.2,0.1], aspect_ratio=0)
-	xcoord_conv=[-range[0]*scale,scale]
-	ycoord_conv=xcoord_conv
 	xax = axis('x', title='Vx', location=[0.12,0.12], axis_range=range, $
-;		coord_transform=[range[0],scale], $
+		coord_transform=[range[0],scale], $
 		color='yellow', text_color='black', tickfont_size=16)
 	yax = axis('y', title='Vy', location=[0.12,0.12], axis_range=range, $
-;		coord_transform=[range[0],scale], $
+		coord_transform=[range[0],scale], $
 		color='yellow', text_color='black', tickfont_size=16)
 	cb = colorbar(target=im, orientation=1, font_size=16, $
 		position=[0.9,0.12,0.96,0.9], /border)
@@ -131,8 +129,8 @@ pro draw_pic, fname=fname
 	fxyz = PD.get('add3D')
 ;
 ; Make a 3D plot
-	draw_3D, fxyz, 0.3, ax[*,1]
-	wait, 100
+;	draw_3D, fxyz, 0.3, ax[*,1]
+;	wait, 100
 
 ;
 ; IDL's interative tool for 3D data
