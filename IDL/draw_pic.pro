@@ -19,7 +19,7 @@
 ;
 
 
-@ParticleDistribution
+@Distribution
 @Field
 
 pro draw_3D, fxyz, iso, ax
@@ -84,7 +84,7 @@ pro draw_pic, fname=fname
 
 ;
 ; Read in distribution function
-	PD = ParticleDistribution(fname, nss, grid)
+	PD = Distribution(fname, nss, grid)
 ;
 ; Print out location	
 	PD.print
