@@ -33,7 +33,7 @@ pro FieldNASA__define
 		pxy:ptr_new(), pxz:ptr_new(), pyz:ptr_new() }
 end
 
-function FieldNASA::Init, nss, nx, nz, path='', fheader='fields'
+function FieldNASA::Init, nss, nx, nz, path=path, fheader=fheader
 	self.path = path
 	self.fheader = fheader
 	self.nss = nss

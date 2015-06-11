@@ -28,7 +28,7 @@ pro FieldLANL__define
 		data2D:ptr_new(), data3D:ptr_new() }
 end
 
-function FieldLANL::Init, nss, nx, nz, path=''
+function FieldLANL::Init, nss, nx, nz, path=path
 	self.path = path
 	self.Bx = ptr_new(fltarr(nx,nz))
 	self.By = ptr_new(fltarr(nx,nz))
