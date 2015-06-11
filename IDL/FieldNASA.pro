@@ -33,10 +33,7 @@ pro FieldNASA__define
 		pxy:ptr_new(), pxz:ptr_new(), pyz:ptr_new() }
 end
 
-function FieldNASA::Init, nss, nx, nz, path=path, fheader=fheader
-	self.path = path
-	self.fheader = fheader
-	self.nss = nss
+function FieldNASA::Init, fname, nss, nx, nz
 	self.it = lonarr(1)
 	self.dt = fltarr(1)
 	self.teti = fltarr(1)
@@ -67,11 +64,6 @@ function FieldNASA::Init, nss, nx, nz, path=path, fheader=fheader
 	self.pxy = ptr_new(fltarr(nx,nz,nss))
 	self.pxz = ptr_new(fltarr(nx,nz,nss))
 	self.pyz = ptr_new(fltarr(nx,nz,nss))
-	return, 1
-end
-
-function FieldNASA::Update, ftime
-	fname = self.path + '/' + self.fheader + '-' + ftime + '.dat'
 	openu, id, fname, /f77_unformatted, /get_lun
 	readu, id, self.it, self.dt, self.teti, $
 		self.xmax, self.zmax, self.nnx, self.nnz, $
