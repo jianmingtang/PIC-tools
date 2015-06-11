@@ -21,9 +21,8 @@
 ;-
 pro FieldNASA__define
 	compile_opt idl2
-	data = { Field, path:'', fheader:'', nss:0L, $
+	data = { FieldNASA, nss:0L, time:0., wpewce:0., $
 		it:0L, dt:0., teti:0., xmax:0., zmax:0., nnx:0L, nnz:0L, $
-		time:0., wpewce:0., $
 		vxs:ptr_new(), vys:ptr_new(), vzs:ptr_new(), $
 		Bx:ptr_new(), By:ptr_new(), Bz:ptr_new(), $
 		Ex:ptr_new(), Ey:ptr_new(), Ez:ptr_new(), $
