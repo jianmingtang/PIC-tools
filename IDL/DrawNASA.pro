@@ -20,12 +20,12 @@
 
 
 ;+
-;	Draw a 3D distribution
+;	Draw an isosurface of a 3D distribution
 ;	fxyz: A 3D float array
 ;	iso: The iso value
 ;	ax: The x-axis coordinates.
 ;-
-pro draw_3D, fxyz, iso, ax
+pro draw_dist_3D, fxyz, iso, ax
 	grid = (size(fxyz))[1]
 	scale = (ax[-1] - ax[0]) / grid
 	fmax = max(fxyz)
@@ -76,6 +76,29 @@ pro draw_dist_2D, data, title, range
 		color='yellow', text_color='black', tickfont_size=16)
 	yax = axis('y', title='Vy', location=[0.12,0.12], axis_range=range, $
 		coord_transform=[range[0],scale], $
+		color='yellow', text_color='black', tickfont_size=16)
+	cb = colorbar(target=im, orientation=1, font_size=16, $
+		position=[0.9,0.12,0.96,0.9], /border)
+end
+
+;+
+;	Draw a 2D field
+;	data: A 2D float array
+;	title: Figure title
+;	xrange: The x-axis range
+;	yrange: The y-axis range
+;-
+pro draw_field_2D, data, title, xrange, yrange
+	xscale = (xrange[1] - xrange[0]) / (size(data))[1]
+	yscale = (yrange[1] - yrange[0]) / (size(data))[2]
+	im = image(data, title=title, font_size=20, $
+		rgb_table=13, min_value=min(data), max_value=max(data), $
+		margin=[0.12,0.12,0.2,0.1], aspect_ratio=0)
+	xax = axis('x', title='X', location=[0.12,0.12], axis_range=xrange, $
+		coord_transform=[xrange[0],xscale], $
+		color='yellow', text_color='black', tickfont_size=16)
+	yax = axis('y', title='Z', location=[0.12,0.12], axis_range=yrange, $
+		coord_transform=[yrange[0],yscale], $
 		color='yellow', text_color='black', tickfont_size=16)
 	cb = colorbar(target=im, orientation=1, font_size=16, $
 		position=[0.9,0.12,0.96,0.9], /border)
