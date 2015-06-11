@@ -33,16 +33,16 @@ pro FieldNASA__define
 		pxy:ptr_new(), pxz:ptr_new(), pyz:ptr_new() }
 end
 
-function FieldNASA::Init, fname, nss, nx, nz
-	self.it = lonarr(1)
-	self.dt = fltarr(1)
-	self.teti = fltarr(1)
-	self.xmax = fltarr(1)
-	self.zmax = fltarr(1)
-	self.nnx = lonarr(1)
-	self.nnz = lonarr(1)
-	self.time = dblarr(1)
-	self.wpewce = fltarr(1)
+function FieldNASA::init, fname, nss, nx, nz
+	it = lonarr(1)
+	dt = fltarr(1)
+	teti = fltarr(1)
+	xmax = fltarr(1)
+	zmax = fltarr(1)
+	nnx = lonarr(1)
+	nnz = lonarr(1)
+	time = dblarr(1)
+	wpewce = fltarr(1)
 	self.vxs = ptr_new(fltarr(nx,nz,nss))
 	self.vys = ptr_new(fltarr(nx,nz,nss))
 	self.vzs = ptr_new(fltarr(nx,nz,nss))
@@ -65,20 +65,19 @@ function FieldNASA::Init, fname, nss, nx, nz
 	self.pxz = ptr_new(fltarr(nx,nz,nss))
 	self.pyz = ptr_new(fltarr(nx,nz,nss))
 	openu, id, fname, /f77_unformatted, /get_lun
-	readu, id, self.it, self.dt, self.teti, $
-		self.xmax, self.zmax, self.nnx, self.nnz, $
+	readu, id, it, dt, teti, xmax, zmax, nnx, nnz, $
 		*self.vxs, *self.vys, *self.vzs, $
 		*self.Bx, *self.By, *self.Bz, $
 		*self.Ex, *self.Ey, *self.Ez, $
 		*self.dns,*self.xe,*self.ze,*self.mass,*self.q, $
-		self.time, self.wpewce,*self.dfac, $
+		time, wpewce,*self.dfac, $
 		*self.pxx, *self.pyy, *self.pzz, $
 		*self.pxy, *self.pxz, *self.pyz
 	close, id
 	return, 1
 end
 
-function FieldNASA::Get, var
+function FieldNASA::get, var
 	if var eq 'vxs' then return, self.vxs else $
 	if var eq 'vys' then return, self.vys else $
 	if var eq 'vzs' then return, self.vzs else $
@@ -99,7 +98,7 @@ function FieldNASA::Get, var
 	return, 0
 end
 
-pro FieldNASA::Print
+pro FieldNASA::print
 	print, format='("Field range: x=(",(F8.3),",",(F8.3),' $
 		+ '"), z=(",(F8.3),",",(F8.3),")")', $
 		(*self.xe)[0],(*self.xe)[-1],(*self.ze)[0],(*self.ze)[-1]
