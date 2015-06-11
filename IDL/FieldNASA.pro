@@ -77,23 +77,23 @@ function FieldNASA::init, fname, nss, nx, nz
 end
 
 function FieldNASA::get, var
-	if var eq 'vxs' then return, self.vxs else $
-	if var eq 'vys' then return, self.vys else $
-	if var eq 'vzs' then return, self.vzs else $
-	if var eq 'Bx' then return, self.Bx else $
-	if var eq 'By' then return, self.By else $
-	if var eq 'Bz' then return, self.Bz else $
-	if var eq 'Ex' then return, self.Ex else $
-	if var eq 'Ey' then return, self.Ey else $
-	if var eq 'Ez' then return, self.Ez else $
-	if var eq 'xe' then return, self.xe else $
-	if var eq 'ze' then return, self.ze else $
-	if var eq 'pxx' then return, self.pxx else $
-	if var eq 'pyy' then return, self.pyy else $
-	if var eq 'pzz' then return, self.pzz else $
-	if var eq 'pxy' then return, self.pxy else $
-	if var eq 'pxz' then return, self.pxz else $
-	if var eq 'pyz' then return, self.pyz else $
+	if var eq 'vxs' then return, *self.vxs else $
+	if var eq 'vys' then return, *self.vys else $
+	if var eq 'vzs' then return, *self.vzs else $
+	if var eq 'Bx' then return, *self.Bx else $
+	if var eq 'By' then return, *self.By else $
+	if var eq 'Bz' then return, *self.Bz else $
+	if var eq 'Ex' then return, *self.Ex else $
+	if var eq 'Ey' then return, *self.Ey else $
+	if var eq 'Ez' then return, *self.Ez else $
+	if var eq 'xe' then return, *self.xe else $
+	if var eq 'ze' then return, *self.ze else $
+	if var eq 'pxx' then return, *self.pxx else $
+	if var eq 'pyy' then return, *self.pyy else $
+	if var eq 'pzz' then return, *self.pzz else $
+	if var eq 'pxy' then return, *self.pxy else $
+	if var eq 'pxz' then return, *self.pxz else $
+	if var eq 'pyz' then return, *self.pyz else $
 	return, 0
 end
 
