@@ -17,7 +17,7 @@
 
 
 ;+
-;	This class is used to load EM fields from PIC data
+;	This class is used to load EM fields from NASA PIC data
 ;-
 pro FieldNASA__define
 	compile_opt idl2

@@ -17,7 +17,7 @@
 
 
 ;+
-;	This class is used to load particle distibution data
+;	This class is used to load particle distibution data from NASA PIC
 ;-
 pro DistNASA__define
 	compile_opt idl2
