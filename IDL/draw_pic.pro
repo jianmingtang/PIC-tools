@@ -19,7 +19,7 @@
 ;
 
 
-@Distribution
+@DistNASA
 @Field
 
 pro draw_3D, fxyz, iso, ax
@@ -82,7 +82,7 @@ pro draw_pic, fname=fname
 
 ;
 ; Read in distribution function
-	PD = obj_new('Distribution', fname, nss, grid)
+	PD = obj_new('DistNASA', fname, nss, grid)
 ;
 ; Print out location	
 	PD.print
