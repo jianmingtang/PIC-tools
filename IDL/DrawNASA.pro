@@ -91,9 +91,10 @@ end
 pro draw_field_2D, data, title, xrange, yrange
 	xscale = (xrange[1] - xrange[0]) / (size(data))[1]
 	yscale = (yrange[1] - yrange[0]) / (size(data))[2]
+	ar = (xrange[1] - xrange[0]) / (yrange[1] - yrange[0])
 	im = image(data, title=title, font_size=20, $
 		rgb_table=13, min_value=min(data), max_value=max(data), $
-		margin=[0.12,0.12,0.2,0.1], aspect_ratio=0)
+		margin=[0.12,0.12,0.2,0.1], aspect_ratio=ar)
 	xax = axis('x', title='X', location=[0.12,0.12], axis_range=xrange, $
 		coord_transform=[xrange[0],xscale], $
 		color='yellow', text_color='black', tickfont_size=16)
