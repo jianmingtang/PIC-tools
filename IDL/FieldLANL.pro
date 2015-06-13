@@ -40,6 +40,7 @@ function FieldLANL::init, path
 	readu, id, *self.nn
 	readu, id, *self.xyz
 	close, id
+	print, *self.nn
 	return, 1
 end
 
@@ -74,7 +75,7 @@ function FieldLANL::get, var, time
 	openr, id, fname, /f77_unformatted, /get_lun
 	field = assoc(id, fstruct)
 	res = fltarr(nx,nz)
-	res = field[time]
+	res = (field[time]).data
 	close, id
 	return, res
 end
