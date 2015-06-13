@@ -21,8 +21,8 @@
 ;-
 pro FieldLANL__define
 	compile_opt idl2
-	data = { FieldLANL, path:'', nn:ptr_new(), $
-			xyz:ptr_new() }
+	data = { FieldLANL, path:'', nx:0L, ny:0L, nz:0L, $
+			xmax:0., ymax:0., zmax:0. data:ptr_new() }
 end
 
 function FieldLANL::init, path
@@ -34,48 +34,42 @@ function FieldLANL::init, path
 	endif else begin
 		print," *** ERROR: File info is missing ***"
 	endelse
-	self.nn = ptr_new(intarr(3))
-	self.xyz = ptr_new(fltarr(3))
+	nx = 0L
+	ny = 0L
+	nz = 0L
+	xmax = 0.
+	ymax = 0.
+	zmax = 0.
 	openr, id, infofile, /f77_unformatted, /get_lun
-	readu, id, *self.nn
-	readu, id, *self.xyz
+	readu, id, nx, ny, nz
+	readu, id, xmax, ymax, zmax
 	close, id
-	print, *self.nn
+	self.nx = nx
+	self.ny = ny
+	self.nz = nz
+	self.xmax = xmax
+	self.ymax = ymax
+	self.zmax = zmax
+	self.data = ptr_new(fltarr(nx,nz))
+	print, nx, ny, nz
 	return, 1
 end
 
-function FieldLANL::read_info, path
+function FieldLANL::draw, var
 
-	; Find the names of data files in the data directory
-
-	datafiles = file_search(path+'/*.gda',count=numq)
-
-	; Now open each file and save the basename to identify later
-
-	print," Number of files=",numq
-	plotme = strarr(numq+1)
-	instring='     '
-	plotme(0)='None'
-;	for i=1,numq do begin
- ;   		if (not little) then openr,i,datafiles(i-1)
-;		else openr,i,datafiles(i-1)
- ;   		plotme(i) = file_basename(datafiles(i-1),'.gda')
-  ;  		print,"i=",i," --> ",plotme(i)
-;	endfor
-
+	draw_field_2D, var, *self.data, [0,self.xmax], [0,self.zmax]
 	return, 1
 end
 
 
 function FieldLANL::get, var, time
-	nx = (*self.nn)[0]
-	nz = (*self.nn)[2]
-	fstruct = { data:fltarr(nx,nz),time:0.0,it:500000 }
+	nx = self.nx
+	nz = self.nz
+	fstruct = { data:fltarr(nx,nz),time:0.0,it:0L }
 	fname = self.path + '/' + var + '.gda'
 	openr, id, fname, /f77_unformatted, /get_lun
 	field = assoc(id, fstruct)
-	res = fltarr(nx,nz)
-	res = (field[time]).data
+	*self.data = (field[time]).data
 	close, id
 	return, res
 end
@@ -83,5 +77,5 @@ end
 pro FieldLANL::print
 	print, format='("Field range: x=(",(F8.3),",",(F8.3),' $
 		+ '"), z=(",(F8.3),",",(F8.3),")")', $
-		(*self.xe)[0],(*self.xe)[-1],(*self.ze)[0],(*self.ze)[-1]
+		0,self.xmax,0,self.zmax
 end
