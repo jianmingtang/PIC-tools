@@ -25,10 +25,10 @@ pro FieldLANL__define
 		 path:'', nx:0L, nz:0L }
 end
 
-function FieldLANL::init, path
+function FieldLANL::init, path, nx, nz
 	self.path = path
-	self.nx = 1000
-	self.nz = 800
+	self.nx = nx
+	self.nz = nz
 	return, 1
 end
 
