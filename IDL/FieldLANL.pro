@@ -54,9 +54,9 @@ function FieldLANL::init, path
 	return, 1
 end
 
-pro FieldLANL::draw, title, data
+pro FieldLANL::draw, data, title
 
-	draw_field_2D, title, data, [0,self.xmax], [0,self.zmax]
+	draw_field_2D, data, title, [0,self.xmax], [0,self.zmax]
 end
 
 
