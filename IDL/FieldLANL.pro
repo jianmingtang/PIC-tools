@@ -40,7 +40,7 @@ function FieldLANL::init, path
 	readu, id, *self.nn
 	readu, id, *self.xyz
 	close, id
-	return, *self.nn
+	return, 1
 end
 
 function FieldLANL::read_info, path
