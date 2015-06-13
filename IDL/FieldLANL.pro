@@ -21,39 +21,62 @@
 ;-
 pro FieldLANL__define
 	compile_opt idl2
-	data = { Field, path:'', $
-		xmax:0., zmax:0., nnx:0L, nnz:0L, $
-		Bx:ptr_new(), By:ptr_new(), Bz:ptr_new(), $
-		Ex:ptr_new(), Ey:ptr_new(), Ez:ptr_new(), $
-		data2D:ptr_new(), data3D:ptr_new() }
+	data = { FieldLANL, xmax:0., zmax:0., nnx:0L, nnz:0L, $
+		 path:'', field:ptr_new() }
 end
 
-function FieldLANL::Init, nss, nx, nz, path=path
+function FieldLANL::init, path, nx, nz
 	self.path = path
-	self.Bx = ptr_new(fltarr(nx,nz))
-	self.By = ptr_new(fltarr(nx,nz))
-	self.Bz = ptr_new(fltarr(nx,nz))
-	self.Ex = ptr_new(fltarr(nx,nz))
-	self.Ey = ptr_new(fltarr(nx,nz))
-	self.Ez = ptr_new(fltarr(nx,nz))
+	fieldstruct = { Data:fltarr(nx,nz),time:0.0,it:500000 }
+	fname = self.path + '/' + 'Bx.gda'
+	openr, id, fname, /f77_unformatted, /get_lun
+	self.field = assoc(id, fieldstruct)
 	return, 1
 end
 
-function FieldLANL::Update, ftime
+function FieldLANL::read_info, path
+	; open binary file for problem description 
+	if ( file_test(directory+'/info') eq 1 ) then begin
+   		print," *** Found Data Information File *** "
+	endif else begin
+		print," *** Error - File info is missing ***"
+	endelse
+	openr, id, path+'/info',/f77_unformatted, /get_lun
+	readu, id, nx,ny,nz
+	readu, id, xmax,ymax,zmax
+	close, id
+
+	; Find the names of data files in the data directory
+
+	datafiles = file_search(path+'/*.gda',count=numq)
+
+	; Now open each file and save the basename to identify later
+
+	print," Number of files=",numq
+	plotme = strarr(numq+1)
+	instring='     '
+	plotme(0)='None'
+	for i=1,numq do begin
+    		if (not little) then openr,i,datafiles(i-1)
+		else openr,i,datafiles(i-1)
+    		plotme(i) = file_basename(datafiles(i-1),'.gda')
+    		print,"i=",i," --> ",plotme(i)
+	endfor
+
+	return, 1
+end
+
+
+function FieldLANL::update, field, time
 	xmax=fltarr(1)
 	zmax=fltarr(1)
 	nnx=lonarr(1)
 	nnz=lonarr(1)
-	fieldarr = fltarr(self.nx, self.nz)
-	fname = self.path + '/' + 'Bx.gda'
-	openr, id, fname, /f77_unformatted, /get_lun
-	self.Bx = assoc(id, fieldarr)
-
 	return, 1
 end
 
-function FieldLANL::Get, var
-	if var eq 'Bx' then return, self.Bx else $
+function FieldLANL::get, var
+	if var eq 'Bx' then return, self.field else $
 	if var eq 'By' then return, self.By else $
 	if var eq 'Bz' then return, self.Bz else $
 	if var eq 'Ex' then return, self.Ex else $
@@ -62,7 +85,7 @@ function FieldLANL::Get, var
 	return, 0
 end
 
-pro FieldLANL::Print
+pro FieldLANL::print
 	print, format='("Field range: x=(",(F8.3),",",(F8.3),' $
 		+ '"), z=(",(F8.3),",",(F8.3),")")', $
 		(*self.xe)[0],(*self.xe)[-1],(*self.ze)[0],(*self.ze)[-1]
