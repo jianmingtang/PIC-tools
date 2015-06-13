@@ -22,7 +22,7 @@
 pro FieldLANL__define
 	compile_opt idl2
 	data = { FieldLANL, path:'', nx:0L, ny:0L, nz:0L, $
-		xmax:0., ymax:0., zmax:0., data:ptr_new() }
+		xmax:0., ymax:0., zmax:0. }
 end
 
 function FieldLANL::init, path
@@ -50,15 +50,13 @@ function FieldLANL::init, path
 	self.xmax = xmax
 	self.ymax = ymax
 	self.zmax = zmax
-	self.data = ptr_new(fltarr(nx,nz))
 	print, nx, ny, nz
 	return, 1
 end
 
-function FieldLANL::draw, var
+pro FieldLANL::draw, title, data
 
-	draw_field_2D, var, *self.data, [0,self.xmax], [0,self.zmax]
-	return, 1
+	draw_field_2D, title, data, [0,self.xmax], [0,self.zmax]
 end
 
 
@@ -69,9 +67,10 @@ function FieldLANL::get, var, time
 	fname = self.path + '/' + var + '.gda'
 	openr, id, fname, /f77_unformatted, /get_lun
 	field = assoc(id, fstruct)
-	*self.data = (field[time]).data
+	res = fltarr(nx,nz)
+	res = (field[time]).data
 	close, id
-	return, *self.data
+	return, res
 end
 
 pro FieldLANL::print
