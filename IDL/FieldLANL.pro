@@ -22,15 +22,13 @@
 pro FieldLANL__define
 	compile_opt idl2
 	data = { FieldLANL, xmax:0., zmax:0., nnx:0L, nnz:0L, $
-		 path:'', field:ptr_new() }
+		 path:'', nx:0L, nz:0L }
 end
 
-function FieldLANL::init, path, nx, nz
+function FieldLANL::init, path
 	self.path = path
-	fieldstruct = { Data:fltarr(nx,nz),time:0.0,it:500000 }
-	fname = self.path + '/' + 'Bx.gda'
-	openr, id, fname, /f77_unformatted, /get_lun
-	self.field = assoc(id, fieldstruct)
+	self.nx = 1000
+	self.nz = 800
 	return, 1
 end
 
@@ -56,33 +54,30 @@ function FieldLANL::read_info, path
 	plotme = strarr(numq+1)
 	instring='     '
 	plotme(0)='None'
-	for i=1,numq do begin
-    		if (not little) then openr,i,datafiles(i-1)
-		else openr,i,datafiles(i-1)
-    		plotme(i) = file_basename(datafiles(i-1),'.gda')
-    		print,"i=",i," --> ",plotme(i)
-	endfor
+;	for i=1,numq do begin
+ ;   		if (not little) then openr,i,datafiles(i-1)
+;		else openr,i,datafiles(i-1)
+ ;   		plotme(i) = file_basename(datafiles(i-1),'.gda')
+  ;  		print,"i=",i," --> ",plotme(i)
+;	endfor
 
 	return, 1
 end
 
 
-function FieldLANL::update, field, time
-	xmax=fltarr(1)
-	zmax=fltarr(1)
-	nnx=lonarr(1)
-	nnz=lonarr(1)
-	return, 1
+function FieldLANL::update, time
+	return, self.field[time]
 end
 
-function FieldLANL::get, var
-	if var eq 'Bx' then return, self.field else $
-	if var eq 'By' then return, self.By else $
-	if var eq 'Bz' then return, self.Bz else $
-	if var eq 'Ex' then return, self.Ex else $
-	if var eq 'Ey' then return, self.Ey else $
-	if var eq 'Ez' then return, self.Ez else $
-	return, 0
+function FieldLANL::get, var, time
+	fstruct = { data:fltarr(self.nx,self.nz),time:0.0,it:500000 }
+	fname = self.path + '/' + var + '.gda'
+	openr, id, fname, /f77_unformatted, /get_lun
+	field = assoc(id, fstruct)
+	res = fltarr(self.nx,self.nz)
+	res = field[time]
+	close, id
+	return, res
 end
 
 pro FieldLANL::print
