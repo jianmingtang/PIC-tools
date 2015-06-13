@@ -22,7 +22,7 @@
 pro FieldLANL__define
 	compile_opt idl2
 	data = { FieldLANL, path:'', nx:0L, ny:0L, nz:0L, $
-			xmax:0., ymax:0., zmax:0. data:ptr_new() }
+		xmax:0., ymax:0., zmax:0., data:ptr_new() }
 end
 
 function FieldLANL::init, path
