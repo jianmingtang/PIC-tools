@@ -67,8 +67,8 @@ end
 
 
 function FieldLANL::get, var, time
-	nx = *self.nn[0]
-	nz = *self.nn[2]
+	nx = (*self.nn)[0]
+	nz = (*self.nn)[2]
 	fstruct = { data:fltarr(nx,nz),time:0.0,it:500000 }
 	fname = self.path + '/' + var + '.gda'
 	openr, id, fname, /f77_unformatted, /get_lun
