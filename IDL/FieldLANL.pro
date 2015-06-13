@@ -71,7 +71,7 @@ function FieldLANL::get, var, time
 	field = assoc(id, fstruct)
 	*self.data = (field[time]).data
 	close, id
-	return, res
+	return, *self.data
 end
 
 pro FieldLANL::print
