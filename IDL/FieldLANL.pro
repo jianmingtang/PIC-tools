@@ -21,8 +21,8 @@
 ;-
 pro FieldLANL__define
 	compile_opt idl2
-	data = { FieldLANL, xmax:0., ymax:0., zmax:0.,  $
-		 path:'', nx:0L, ny:0L, nz:0L }
+	data = { FieldLANL, path:'', nn:ptr_new(), $
+			xyz:ptr_new() }
 end
 
 function FieldLANL::init, path
@@ -34,13 +34,13 @@ function FieldLANL::init, path
 	endif else begin
 		print," *** ERROR: File info is missing ***"
 	endelse
+	self.nn = ptr_new(intarr(3))
+	self.xyz = ptr_new(fltarr(3))
 	openr, id, infofile, /f77_unformatted, /get_lun
-	readu, id, self.nx, self.ny, self.nz
-	readu, id, self.xmax, self.ymax, self.zmax
+	readu, id, *self.nn
+	readu, id, *self.xyz
 	close, id
-	nn = intarr(3)
-	xyz = fltarr(3)
-	return, nn
+	return, *self.nn
 end
 
 function FieldLANL::read_info, path
@@ -67,11 +67,13 @@ end
 
 
 function FieldLANL::get, var, time
-	fstruct = { data:fltarr(self.nx,self.nz),time:0.0,it:500000 }
+	nx = *self.nn[0]
+	nz = *self.nn[2]
+	fstruct = { data:fltarr(nx,nz),time:0.0,it:500000 }
 	fname = self.path + '/' + var + '.gda'
 	openr, id, fname, /f77_unformatted, /get_lun
 	field = assoc(id, fstruct)
-	res = fltarr(self.nx,self.nz)
+	res = fltarr(nx,nz)
 	res = field[time]
 	close, id
 	return, res
