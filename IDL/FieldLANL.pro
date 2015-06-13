@@ -40,7 +40,7 @@ function FieldLANL::init, path
 	close, id
 	nn = intarr(3)
 	xyz = fltarr(3)
-	return, nn, xyz
+	return, nn
 end
 
 function FieldLANL::read_info, path
