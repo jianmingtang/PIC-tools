@@ -21,28 +21,29 @@
 ;-
 pro FieldLANL__define
 	compile_opt idl2
-	data = { FieldLANL, xmax:0., zmax:0., nnx:0L, nnz:0L, $
-		 path:'', nx:0L, nz:0L }
+	data = { FieldLANL, xmax:0., ymax:0., zmax:0.,  $
+		 path:'', nx:0L, ny:0L, nz:0L }
 end
 
-function FieldLANL::init, path, nx, nz
+function FieldLANL::init, path
 	self.path = path
-	self.nx = nx
-	self.nz = nz
-	return, 1
+	infofile = path+'/info'
+	; open binary file for problem description 
+	if ( file_test(infofile) eq 1 ) then begin
+   		print," *** Found Data Information File ***"
+	endif else begin
+		print," *** ERROR: File info is missing ***"
+	endelse
+	openr, id, infofile, /f77_unformatted, /get_lun
+	readu, id, self.nx, self.ny, self.nz
+	readu, id, self.xmax, self.ymax, self.zmax
+	close, id
+	nn = intarr(3)
+	xyz = fltarr(3)
+	return, nn, xyz
 end
 
 function FieldLANL::read_info, path
-	; open binary file for problem description 
-	if ( file_test(directory+'/info') eq 1 ) then begin
-   		print," *** Found Data Information File *** "
-	endif else begin
-		print," *** Error - File info is missing ***"
-	endelse
-	openr, id, path+'/info',/f77_unformatted, /get_lun
-	readu, id, nx,ny,nz
-	readu, id, xmax,ymax,zmax
-	close, id
 
 	; Find the names of data files in the data directory
 
@@ -64,10 +65,6 @@ function FieldLANL::read_info, path
 	return, 1
 end
 
-
-function FieldLANL::update, time
-	return, self.field[time]
-end
 
 function FieldLANL::get, var, time
 	fstruct = { data:fltarr(self.nx,self.nz),time:0.0,it:500000 }
