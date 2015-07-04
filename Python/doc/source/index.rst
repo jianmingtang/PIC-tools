@@ -13,7 +13,7 @@ Welcome to PIC tools documentation
 
    main
    PIC
-   GUI/index
+   GUI
    Figure
 
 
