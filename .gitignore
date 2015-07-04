@@ -18,5 +18,4 @@ CPP/src/Makefile
 CPP/src/Makefile.in
 CPP/stamp-h1
 *.o
-*.png
 *.pyc
