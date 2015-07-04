@@ -12,9 +12,9 @@ Welcome to PIC tools documentation
    :maxdepth: 3
 
    main
-   PIC/index
+   PIC
    GUI/index
-   Figure/index
+   Figure
 
 
 Indices and tables
