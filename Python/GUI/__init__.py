@@ -1,4 +1,5 @@
-""" GUI (wxPython) classes
+"""
+GUI (wxPython) classes
 """
 
 from F2D import *

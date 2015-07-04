@@ -6,13 +6,12 @@
 Welcome to PIC tools documentation
 ==================================
 
-.. include:: ../../../README
-
-Contents:
+.. include:: ../../../README.rst
 
 .. toctree::
    :maxdepth: 3
 
+   main
    PIC/index
    GUI/index
    Figure/index

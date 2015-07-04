@@ -1,4 +1,1 @@
-PIC-tools
-=========
-
-Visualization tools for analyzing PIC simulation data
+**PIC-tools** is a set of visualization tools for analyzing PIC simulation data

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
+"""
+    Draw PIC data using matplotlib and wxPython
 
-
-#    Draw PIC data using matplotlib and wxPython
-#
-#    Copyright (C) 2014  Jian-Ming Tang <jmtang@mailaps.org>
-#
+    Copyright (C) 2014  Jian-Ming Tang <jmtang@mailaps.org>
+"""
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
@@ -21,13 +20,12 @@
 
 import os
 import wx
-# from wx.lib.pubsub import pub
 import GUI
 
 
 class PanelBackground(wx.Panel):
-
-    """  Panel with a background image
+    """
+    Panel with a background image
     """
 
     def __init__(self, *args, **kwargs):
@@ -43,17 +41,18 @@ class PanelBackground(wx.Panel):
         self.SetSizer(sizer)
 
     def load_data(self):
-        """ Do nothing if on_file_open() is called.
+        """
+        Do nothing if on_file_open() is called.
         """
         pass
 
 
 class MainMenuBar(wx.MenuBar):
-
-    """ Main Menu Bar
-            * File Menu
-            * Window Menu
-            * Help Menu
+    """
+    Main Menu Bar
+        * File Menu
+        * Window Menu
+        * Help Menu
     """
     labelF2D = 'Field 2D Plot'
     labelF1D = 'Field 1D Plot'
@@ -61,7 +60,8 @@ class MainMenuBar(wx.MenuBar):
     labelD2D = 'Distribution 2D Plot'
 
     def __init__(self, *args, **kwargs):
-        """ Create the Main Menu Bar
+        """
+        Create the Main Menu Bar
         """
         wx.MenuBar.__init__(self,  *args, **kwargs)
 
@@ -111,16 +111,17 @@ class MainMenuBar(wx.MenuBar):
 
 
 class MainFrame(wx.Frame):
-
-    """ Main Frame (Controller)
-            * MenuBar
-            * Panel (Background/F2D/D3D)
-            * StatusBar
+    """
+    Main Frame (Controller)
+        * MenuBar
+        * Panel (Background/F2D/D3D)
+        * StatusBar
     """
     pathname = ''
 
     def __init__(self, *args, **kwargs):
-        """ Create the Main Frame with MainMenuBar/Panel/StatusBar
+        """
+        Create the Main Frame with MainMenuBar/Panel/StatusBar
         """
         wx.Frame.__init__(self, *args, **kwargs)
 
@@ -161,12 +162,14 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_frame_D2D, self.menu.frame_D2D)
 
     def status_message(self, msg):
-        """ Display a message in the Status Bar
+        """
+        Display a message in the Status Bar
         """
         self.status_bar.SetStatusText(msg)
 
     def replace_panel(self, panel):
-        """ replace the background image with dist/ctrl panels
+        """
+        Replace the background image with dist/ctrl panels
         """
         self.panel.Destroy()
         self.panel = panel
@@ -176,13 +179,15 @@ class MainFrame(wx.Frame):
         self.SetSizerAndFit(sizer)
 
     def on_file_new(self, event):
-        """ Open a new root Frame
+        """
+        Open a new root Frame
         """
         frame = MainFrame(None, title='PIC Draw')
         frame.Show()
 
     def on_file_open(self, event):
-        """ Choose a PIC data file
+        """
+        Choose a PIC data file
         """
         dlg = wx.FileDialog(self, defaultDir=os.getcwd(),
                             style=wx.FD_OPEN)
@@ -197,7 +202,8 @@ class MainFrame(wx.Frame):
                 self.status_message('Error: File Not Found!')
 
     def on_file_save(self, event):
-        """ Save the current Figure to a PNG file
+        """
+        Save the current Figure to a PNG file
         """
         ffilter = 'Portable Network Graphics (*.png)|*.png'
         fname = self.fkey.title() + '_t' + str(self.time)
@@ -212,12 +218,14 @@ class MainFrame(wx.Frame):
             self.status_message("Saved to %s" % path)
 
     def on_file_exit(self, event):
-        """ Close a root Frame
+        """
+        Close a root Frame
         """
         self.Destroy()
 
     def on_frame_F2D(self, event):
-        """ Replace panel for Field 2D plot
+        """
+        Replace panel for Field 2D plot
         """
         self.on_file_open(None)
         self.replace_panel(GUI.PanelF2D(self))
@@ -228,13 +236,15 @@ class MainFrame(wx.Frame):
         self.menu.frame_D2D.Enable(False)
 
     def on_frame_F1D(self, event):
-        """ Open a new sub frame for Field 1D plot
+        """
+        Open a new sub frame for Field 1D plot
         """
         frame = GUI.FrameF1D(self.panel, title=self.menu.labelF1D)
         frame.Show()
 
     def on_frame_D3D(self, event):
-        """ Replace panel for Distribution 3D plot
+        """
+        Replace panel for Distribution 3D plot
         """
         self.on_file_open(None)
         self.replace_panel(GUI.PanelD3D(self))
@@ -245,7 +255,8 @@ class MainFrame(wx.Frame):
         self.menu.frame_D2D.Enable(True)
 
     def on_frame_D2D(self, event):
-        """ Open a new sub frame for Distribution 2D plot
+        """
+        Open a new sub frame for Distribution 2D plot
         """
         frame = GUI.FrameD2D(self.panel, title=self.menu.labelD2D)
         frame.Show()

@@ -1,7 +1,8 @@
 GUI
 ===
 
-Contents:
+.. automodule:: GUI
+   :synopsis:
 
 .. toctree::
    :maxdepth: 2

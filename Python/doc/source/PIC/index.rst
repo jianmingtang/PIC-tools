@@ -1,10 +1,23 @@
-PIC
-===
+Loading the PIC data
+====================
 
-Contents:
+.. automodule:: PIC
+   :synopsis:
 
-.. toctree::
-   :maxdepth: 2
+LANL
+----
 
-   LANL
-   NASA
+.. automodule:: PIC.FieldLANL
+   :synopsis:
+   :members:
+
+NASA
+----
+
+.. automodule:: PIC.DistNASA
+   :synopsis:
+   :members:
+
+.. automodule:: PIC.FieldNASA
+   :synopsis:
+   :members:
