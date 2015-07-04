@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to PIC tools's documentation!
-=====================================
+Welcome to PIC tools documentation
+==================================
+
+.. include:: ../../../README
 
 Contents:
 
