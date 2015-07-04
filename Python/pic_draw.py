@@ -34,7 +34,7 @@ class PanelBackground(wx.Panel):
     # Add the backgroud image
     #
         image = wx.StaticBitmap(self, bitmap=wx.BitmapFromImage(
-            wx.Image('draw_pic.png', wx.BITMAP_TYPE_PNG)))
+            wx.Image('pic_draw_background.png', wx.BITMAP_TYPE_PNG)))
 
         sizer = wx.GridSizer()
         sizer.Add(image, 0, wx.ALIGN_CENTER)
