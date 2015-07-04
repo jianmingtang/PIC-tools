@@ -288,17 +288,17 @@ class PanelF2D(wx.Panel):
         if self.fkey[0] == 'B':
             return wpewce
         if self.fkey[0] == 'E':
-            return wpewce**2 * self.smi
+            return wpewce ** 2 * self.smi
         elif self.fkey[0] == 'j':
             return wpewce * self.smi
         elif self.fkey[0] == 'n':
-            return self.smi**2 
+            return self.smi ** 2
         elif self.fkey[0] == 'p':
-            return wpewce**2
+            return wpewce ** 2
         elif self.fkey[0] == 'T':
-            return (wpewce/self.smi)**2
+            return (wpewce / self.smi) ** 2
         elif self.fkey[0] == 'V':
-            return wpewce/self.smi
+            return wpewce / self.smi
         else:
             return 1
 
@@ -318,7 +318,7 @@ class PanelF2D(wx.Panel):
             title = title[0].upper() + title[1:]
         r = [self.ctrl.tc_range[i].GetValue() for i in range(4)]
         # temp fix of unphysical pressure/density near the boundaries
-        if self.fkey[0] in ['n','p','T','V']:
+        if self.fkey[0] in ['n', 'p', 'T', 'V']:
             if r[0] < 1:
                 r[0] = 1
                 self.ctrl.tc_range[0].SetValue(1)
@@ -361,28 +361,28 @@ class PanelF2D(wx.Panel):
             self.Z = (self.field[key][1] + self.field[key][3] - j1 * j2 / dn) \
                 * self.field.data['mass'][1]
         elif self.fkey == 'T_i':
-            keyplist = ['pxx','pyy','pzz']
-            keyjlist = ['vxs','vys','vzs']
+            keyplist = ['pxx', 'pyy', 'pzz']
+            keyjlist = ['vxs', 'vys', 'vzs']
             dn = self.dni()
             tmp = numpy.zeros(numpy.shape(self.field['pxx'][0]))
             for i in range(3):
                 keyp = keyplist[i]
                 keyj = keyjlist[i]
                 jc = self.field[keyj][0] + self.field[keyj][2]
-                tmp += (self.field[keyp][0] + self.field[keyp][2] - jc*jc/dn) \
-                        * self.field.data['mass'][0]
+                tmp += (self.field[keyp][0] + self.field[keyp][2] - jc * jc / dn) \
+                    * self.field.data['mass'][0]
             self.Z = tmp / dn / 3.
         elif self.fkey == 'T_e':
-            keyplist = ['pxx','pyy','pzz']
-            keyjlist = ['vxs','vys','vzs']
+            keyplist = ['pxx', 'pyy', 'pzz']
+            keyjlist = ['vxs', 'vys', 'vzs']
             dn = self.dne()
             tmp = numpy.zeros(numpy.shape(self.field['pxx'][1]))
             for i in range(3):
                 keyp = keyplist[i]
                 keyj = keyjlist[i]
                 jc = self.field[keyj][1] + self.field[keyj][3]
-                tmp += (self.field[keyp][1] + self.field[keyp][3] - jc*jc/dn) \
-                        * self.field.data['mass'][1]
+                tmp += (self.field[keyp][1] + self.field[keyp][3] - jc * jc / dn) \
+                    * self.field.data['mass'][1]
             self.Z = tmp / dn / 3.
         elif self.fkey in self.ctrl.vilist:
             dn = self.dni()

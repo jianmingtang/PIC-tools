@@ -24,6 +24,7 @@ import GUI
 
 
 class PanelBackground(wx.Panel):
+
     """
     Panel with a background image
     """
@@ -48,6 +49,7 @@ class PanelBackground(wx.Panel):
 
 
 class MainMenuBar(wx.MenuBar):
+
     """
     Main Menu Bar
         * File Menu
@@ -111,6 +113,7 @@ class MainMenuBar(wx.MenuBar):
 
 
 class MainFrame(wx.Frame):
+
     """
     Main Frame (Controller)
         * MenuBar
